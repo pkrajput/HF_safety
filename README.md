@@ -37,11 +37,25 @@ Counts are provisional engineering defaults, not a power justification or a prom
 
 Every duration branch starts from the same completed phase-1 checkpoint and an identical initial team ledger. Further work occurs on fresh fair missions while conversations persist. Reports always ask about phase 1. Reports branch by audit announcement and optional ledger/irrelevant reminder. Early stopping and failed continuations remain in their assigned groups.
 
-## Models and hardware
+## Full-model campaign and hardware
 
-Targets: **Qwen3-32B**, **Apertus-70B-Instruct-2509**, **Mistral-Small-3.2-24B-Instruct-2506**. Auditor: **GLM-4.5-Air**, reserved for annotations and development proposals. Exact repository revisions are pinned in `configs/models.lock.json`. A permissive weight license does not imply every training artifact was released.
+Targets are full **DeepSeek-R1-0528**, the owner's installed **GLM-5.3**, and proposed third-family comparator **Qwen3.5-397B-A17B-FP8**. Qwen is a full-size comparator proposal, not a claim that it is the latest Qwen flagship. **Apertus-70B-Instruct-2509** is reserved for auxiliary auditing and human-checked annotations. GLM is now a target. The former small-model target configuration is archived in `configs/models.legacy.json`.
 
-Plan for one four-GPU node, serving models sequentially. Check whether the allocation is GH200/Arm or standalone H200 before selecting the environment. [Cluster instructions](docs/CLUSTER.md) cover existing and freshly downloaded weights.
+Serve **one model at a time**. Complete its selected stages, stop its server, then load the next family. Many isolated swarms share that one server; four agents in a swarm do not require four model copies. Start with two concurrent swarms and profile before increasing concurrency.
+
+The proposed main campaign uses 12 fixtures, team size four, and one repetition. It assigns **384 fresh four-agent swarms per target**, or **1,152 across three targets**. These create 2,016 paired reports per target. Solo controls are separate and are not included in the swarm count. Current fixtures are graph relabellings, so these are fresh stochastic team runs rather than 384 independent task designs.
+
+| Stage | Four-agent swarms per target | Paired reports per target |
+|---|---:|---:|
+| STE | 216 | 648 |
+| Duration | 24 | 648 |
+| Poisoned stress | 96 | 576 |
+| Guardrail repair | 48 | 144 |
+| Total | 384 | 2,016 |
+
+Use `plan --team-sizes 4 --fixtures 12 --repetitions 1 --budget-profile frontier` for each main stage. The frontier profile starts with 8,192 tokens per action/report, including reasoning tokens. These are pilot starting limits, not evidence of sufficient reasoning time or a throughput forecast. The standard profile remains for inexpensive software checks.
+
+A single model still has to fit. Published native FP8 R1 and GLM-5.3 artifacts exceed four H200s' aggregate GPU memory before runtime overhead. Existing GLM quantization/offload must be recorded; sequential loading does not resolve an individual model's memory requirement. No automatic switch to a distilled, Air, Flash, or smaller target is allowed. Check whether the actual allocation is GH200/Arm or H200, then validate the serving profile. The operator checks for installed GLM-5.3 and downloads it only if absent. The [operator instructions](docs/OPERATOR_HANDOFF.md) and [cluster handoff](docs/CLUSTER.md) cover existing servers and managed launch.
 
 ## Offline smoke test
 
@@ -50,7 +64,7 @@ Python 3.11 or later; no GPU, external API, or dependencies needed for the harne
 ```bash
 python3 -m unittest discover -s tests -v
 python3 -m auditlab.cli plan --stage network_pilot --out manifests/network-pilot.json
-python3 -m auditlab.cli run --models configs/models.json --model qwen --mock --manifest manifests/network-pilot.json --out results/network-mock --workers 2
+python3 -m auditlab.cli run --models configs/models.json --model deepseek_r1 --mock --manifest manifests/network-pilot.json --out results/network-mock --workers 2
 python3 -m auditlab.cli verify --results results/network-mock
 python3 -m auditlab.cli analyze --results results/network-mock --out results/network-mock-summary.json
 python3 -m auditlab.cli replay-index --results results/network-mock --out artifacts/network-mock-replay.json

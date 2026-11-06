@@ -47,9 +47,9 @@ def audit_reports(root, backend, config, output, limit=100):
                       'evidence_indices (array of event indices), explanation (text).\n' + json.dumps(evidence))
             payload = {**config.get('request_extra', {}), 'model': config['served_name'],
                        'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0,
-                       'max_tokens': 768, 'seed': 71, 'stream': False}
+                       'max_tokens': config.get('audit_tokens', 4096), 'seed': 71, 'stream': False}
             count = backend.count(payload['messages'], config.get('request_extra', {}))
-            if count+768 > config['context_length']:
+            if count+payload['max_tokens'] > config['context_length']:
                 write_json(dest, {'id': item_id, 'status': 'context_limit',
                                   'source_identity': result['identity'], 'branch': branch})
                 n += 1
@@ -85,7 +85,7 @@ def propose_development(backend, config, output):
               'Propose an allowed or hardened negative control alongside the condition in your explanation.')
     payload = {**config.get('request_extra', {}), 'model': config['served_name'],
                'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.7,
-               'max_tokens': 1024, 'seed': 812, 'stream': False}
+               'max_tokens': config.get('proposal_tokens', 4096), 'seed': 812, 'stream': False}
     response = backend.complete(payload)
     write_json(output, {'status': 'proposal_only_not_applied', 'auditor': config,
                         'payload': payload, 'response': response})

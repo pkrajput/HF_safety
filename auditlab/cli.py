@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .analysis import summarize
 from .auditor import audit_reports, propose_development
-from .backend import HTTPBackend, MockBackend, parse_object
+from .backend import HTTPBackend, MockBackend, parse_object, preflight
 from .common import Journal, digest, now, read_json, write_json
 from .design import build_manifest, estimate, validate_manifest
 from .runner import run_episode
@@ -27,7 +27,8 @@ def get_model(args):
         return config, MockBackend()
     if not re.fullmatch('[a-f0-9]{40}', config['revision']):
         raise ValueError('Pin the model revision first with the pin command')
-    return config, HTTPBackend(args.endpoint, config['served_name'])
+    return config, HTTPBackend(args.endpoint, config['served_name'],
+                               timeout=config.get('request_timeout_seconds', 300))
 
 
 def main():
@@ -36,6 +37,9 @@ def main():
     p = sub.add_parser('plan')
     p.add_argument('--stage', choices=[*STAGES, 'pilot', 'core', 'prospective', 'repair', 'compute', 'plain_control'], required=True)
     p.add_argument('--fixtures', type=int)
+    p.add_argument('--team-sizes', type=int, nargs='+', choices=[1, 4])
+    p.add_argument('--repetitions', type=int, default=1)
+    p.add_argument('--budget-profile', choices=['standard', 'frontier'], default='standard')
     p.add_argument('--out', required=True)
     p = sub.add_parser('estimate')
     p.add_argument('--manifest', required=True)
@@ -78,12 +82,18 @@ def main():
     if args.command == 'plan':
         if args.fixtures is not None and args.fixtures < 1:
             parser.error('--fixtures must be positive')
-        manifest = (build_network_manifest(args.stage, args.fixtures or 6) if args.stage in STAGES else
-                    build_manifest(args.stage, args.fixtures))
+        if args.stage not in STAGES and (args.team_sizes or args.repetitions != 1 or args.budget_profile != 'standard'):
+            parser.error('Team sizes, repetitions and budget profiles apply to network stages only')
+        manifest = (build_network_manifest(args.stage, args.fixtures or 6,
+                    team_sizes=args.team_sizes, repetitions=args.repetitions, budget_profile=args.budget_profile)
+                    if args.stage in STAGES else build_manifest(args.stage, args.fixtures))
         write_json(args.out, manifest)
         print(json.dumps({'manifest': args.out, 'hash': manifest['design_hash'],
-                          'episodes_per_model': len(manifest['cases'])}, indent=2))
+                          'episodes_per_model': len(manifest['cases']),
+                          **(estimate_network(manifest, models=1) if args.stage in STAGES else {})}, indent=2))
     elif args.command == 'estimate':
+        if args.model_count < 1:
+            parser.error('--model-count must be positive')
         if args.measured_output_tps is not None and args.measured_output_tps <= 0:
             parser.error('throughput must be positive')
         manifest = read_json(args.manifest)
@@ -105,17 +115,7 @@ def main():
         print(f'Pinned {len(models)} model repositories in {args.out}; no weights downloaded.')
     elif args.command == 'preflight':
         config, backend = get_model(args)
-        messages = [{'role': 'user', 'content': 'Return exactly the JSON object {"ok":true}.'}]
-        count = backend.count(messages, config.get('request_extra', {}))
-        response = backend.complete({**config.get('request_extra', {}),
-                    'model': config['served_name'], 'messages': messages,
-                    'temperature': 0, 'max_tokens': 64, 'stream': False})
-        choice = response['choices'][0]
-        if choice.get('finish_reason') != 'stop' or parse_object(choice['message']['content']) != {'ok': True}:
-            raise ValueError('Preflight JSON check failed; inspect template and generation settings')
-        if not isinstance(response.get('usage', {}).get('completion_tokens'), int):
-            raise ValueError('Preflight usage accounting missing')
-        print(json.dumps({'prompt_tokens_counted': count, 'response': response}, indent=2))
+        print(json.dumps(preflight(backend, config), indent=2))
     elif args.command in ('run', 'audit', 'propose', 'semantic'):
         config, backend = get_model(args)
         if args.command == 'semantic':
@@ -132,7 +132,7 @@ def main():
             print('Development proposal saved; no experiment was modified.')
             return
         if config['role'] != 'target':
-            parser.error('GLM is reserved for auditing; choose a target model')
+            parser.error('This model is reserved for auditing; choose a target model')
         if args.workers < 1 or args.wall_seconds <= 0 or (args.limit is not None and args.limit < 1):
             parser.error('workers, wall-seconds and limit must be positive')
         manifest = read_json(args.manifest)

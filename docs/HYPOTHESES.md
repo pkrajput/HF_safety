@@ -172,3 +172,8 @@ Select stressed instances by documented feasibility and pressure criteria, not b
 The collection should first establish task competence, reporting validity and treatment adherence. Then prioritise the standalone STE contrasts, assigned-continuation contrasts and their strongest discriminating controls. Keep the poisoned experiment separately labelled and budgeted.
 
 Freeze task generation, language materials, branch assignments and sample sizes before confirmation. If the available allocation cannot support the precision target, reduce secondary conditions or narrow the claim. Do not trade independent histories for a large number of correlated branches and present the latter as increased sample size.
+
+
+## Model roster and independent runs
+
+The revised targets are full R1-0528, GLM-5.3, and proposed Qwen3.5-397B-A17B-FP8. Apertus-70B is reserved for auxiliary auditing. The proposed 384 four-agent swarms per target are fresh phase-1 runs; their 2,016 report branches are repeated measurements. These counts are design allocations, not observations or a power calculation. Preserve per-family results and the deployed precision. Using a large checkpoint does not establish a universal property of LLMs.

@@ -1,37 +1,118 @@
 {
-  "qwen": {
-    "id": "qwen", "family": "qwen", "role": "target",
-    "repository": "Qwen/Qwen3-32B", "revision": "UNPINNED",
-    "served_name": "qwen", "context_length": 16384,
-    "temperature": 0.7, "top_p": 0.8,
-    "request_extra": {"chat_template_kwargs": {"enable_thinking": false}},
-    "tensor_parallel_size": 4, "dtype": "bfloat16",
-    "serve_extra": [], "license": "Apache-2.0"
+  "deepseek_r1": {
+    "context_length": 65536,
+    "request_timeout_seconds": 1800,
+    "tensor_parallel_size": 4,
+    "dtype": "auto",
+    "preflight_tokens": 8192,
+    "semantic_tokens": 8192,
+    "capture_supported": false,
+    "history_reasoning_policy": "parsed_final_content_only; raw reasoning retained in response journal",
+    "id": "deepseek_r1",
+    "family": "deepseek",
+    "role": "target",
+    "repository": "deepseek-ai/DeepSeek-R1-0528",
+    "revision": "UNPINNED",
+    "served_name": "deepseek_r1",
+    "temperature": 0.6,
+    "top_p": 0.95,
+    "request_extra": {},
+    "serve_extra": [
+      "--reasoning-parser",
+      "deepseek_r1"
+    ],
+    "precision": "native_fp8",
+    "deployment_status": "requires_site_profile",
+    "license": "MIT",
+    "selection_note": "Full R1-0528 requested by owner; no distilled substitution. Native FP8 exceeds four H200s; resolve installed quantization/offload before collection."
   },
-  "apertus": {
-    "id": "apertus", "family": "apertus", "role": "target",
-    "repository": "swiss-ai/Apertus-70B-Instruct-2509", "revision": "UNPINNED",
-    "served_name": "apertus", "context_length": 16384,
-    "temperature": 0.7, "top_p": 0.9, "request_extra": {},
-    "tensor_parallel_size": 4, "dtype": "bfloat16",
-    "serve_extra": [], "license": "Apache-2.0"
+  "glm53": {
+    "context_length": 65536,
+    "request_timeout_seconds": 1800,
+    "tensor_parallel_size": 4,
+    "dtype": "auto",
+    "preflight_tokens": 8192,
+    "semantic_tokens": 8192,
+    "capture_supported": false,
+    "history_reasoning_policy": "parsed_final_content_only; raw reasoning retained in response journal",
+    "id": "glm53",
+    "family": "glm",
+    "role": "target",
+    "repository": "zai-org/GLM-5.3",
+    "revision": "UNPINNED",
+    "served_name": "glm53",
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "request_extra": {
+      "chat_template_kwargs": {
+        "clear_thinking": true,
+        "reasoning_effort": "high"
+      }
+    },
+    "serve_extra": [
+      "--reasoning-parser",
+      "glm47"
+    ],
+    "precision": "native_fp8",
+    "deployment_status": "requires_site_profile",
+    "license": "GLM-5.3",
+    "selection_note": "Owner reports GLM-5.3 installed. Record actual artifact, precision, offload and launch configuration; do not replace existing working deployment."
   },
-  "mistral": {
-    "id": "mistral", "family": "mistral", "role": "target",
-    "repository": "mistralai/Mistral-Small-3.2-24B-Instruct-2506", "revision": "UNPINNED",
-    "served_name": "mistral", "context_length": 16384,
-    "temperature": 0.7, "top_p": 0.9, "request_extra": {},
-    "tensor_parallel_size": 4, "dtype": "bfloat16",
-    "serve_extra": ["--tokenizer-mode", "mistral", "--config-format", "mistral", "--load-format", "mistral"],
-    "license": "Apache-2.0"
+  "qwen_full": {
+    "context_length": 65536,
+    "request_timeout_seconds": 1800,
+    "tensor_parallel_size": 4,
+    "dtype": "auto",
+    "preflight_tokens": 8192,
+    "semantic_tokens": 8192,
+    "capture_supported": false,
+    "history_reasoning_policy": "parsed_final_content_only; raw reasoning retained in response journal",
+    "id": "qwen_full",
+    "family": "qwen",
+    "role": "target",
+    "repository": "Qwen/Qwen3.5-397B-A17B-FP8",
+    "revision": "UNPINNED",
+    "served_name": "qwen_full",
+    "temperature": 0.6,
+    "top_p": 0.95,
+    "request_extra": {
+      "chat_template_kwargs": {
+        "enable_thinking": true
+      }
+    },
+    "serve_extra": [
+      "--reasoning-parser",
+      "qwen3"
+    ],
+    "precision": "native_fp8",
+    "deployment_status": "requires_site_profile",
+    "license": "Apache-2.0",
+    "selection_note": "Proposed third full-size open-weight family comparator. Selection is a proposal, not a claim of being the latest Qwen flagship; pilot fit and serving support before freezing."
   },
-  "glm_auditor": {
-    "id": "glm_auditor", "family": "glm", "role": "auditor",
-    "repository": "zai-org/GLM-4.5-Air", "revision": "UNPINNED",
-    "served_name": "glm_auditor", "context_length": 16384,
-    "temperature": 0.0, "top_p": 0.9,
-    "request_extra": {"chat_template_kwargs": {"enable_thinking": false}},
-    "tensor_parallel_size": 4, "dtype": "bfloat16",
-    "serve_extra": [], "license": "MIT"
+  "apertus_auditor": {
+    "context_length": 65536,
+    "request_timeout_seconds": 1800,
+    "tensor_parallel_size": 4,
+    "dtype": "bfloat16",
+    "preflight_tokens": 8192,
+    "semantic_tokens": 8192,
+    "capture_supported": false,
+    "history_reasoning_policy": "parsed_final_content_only; raw reasoning retained in response journal",
+    "id": "apertus_auditor",
+    "family": "apertus",
+    "role": "auditor",
+    "repository": "swiss-ai/Apertus-70B-Instruct-2509",
+    "revision": "UNPINNED",
+    "served_name": "apertus_auditor",
+    "temperature": 0.0,
+    "top_p": 0.9,
+    "request_extra": {},
+    "serve_extra": [],
+    "license": "Apache-2.0",
+    "precision": "bf16",
+    "deployment_status": "pilot_required",
+    "audit_tokens": 4096,
+    "proposal_tokens": 4096,
+    "selection_note": "Separate family reserved for auxiliary annotation. All labels require human review; annotation quality needs calibration."
   }
 }

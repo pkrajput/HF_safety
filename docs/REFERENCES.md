@@ -18,9 +18,13 @@ Checked on 2026-11-06. Stable primary links are supplied. Bibliographic DOI meta
 
 The revised game also draws design motivation from Dwarkesh Patel's November 5, 2026 [Blood on the Clocktower write-up](https://www.dwarkesh.com/p/clocktower): fixed rules, persistent state, multiple strategies, and a programmatic referee. Our game assigns a legitimate cooperative objective and measures reporting mechanisms; it does not copy the social-deception objective or use Elo as a deception metric. This is a benchmark write-up, not a peer-reviewed causal study.
 
-- [Qwen3-32B](https://huggingface.co/Qwen/Qwen3-32B)
-- [Apertus-70B-Instruct-2509](https://huggingface.co/swiss-ai/Apertus-70B-Instruct-2509)
-- [Mistral-Small-3.2-24B-Instruct-2506](https://huggingface.co/mistralai/Mistral-Small-3.2-24B-Instruct-2506)
-- [GLM-4.5-Air](https://huggingface.co/zai-org/GLM-4.5-Air)
+- [DeepSeek-R1-0528](https://huggingface.co/deepseek-ai/DeepSeek-R1-0528), full requested target; [published shards](https://huggingface.co/deepseek-ai/DeepSeek-R1-0528/tree/main).
+- [GLM-5.3](https://huggingface.co/zai-org/GLM-5.3), installed target named by the owner; [vLLM deployment recipe](https://recipes.vllm.ai/zai-org/GLM-5.3).
+- [Qwen3.5-397B-A17B-FP8](https://huggingface.co/Qwen/Qwen3.5-397B-A17B-FP8), proposed full-size third-family comparator.
+- [Apertus-70B-Instruct-2509](https://huggingface.co/swiss-ai/Apertus-70B-Instruct-2509), reserved auxiliary auditor.
+- [NVIDIA H200 specifications](https://www.nvidia.com/en-us/data-center/h200/), 141 GB memory per GPU; a four-GPU allocation is not an eight-GPU deployment.
+- [vLLM reasoning output documentation](https://docs.vllm.ai/en/latest/features/reasoning_outputs/), parser-specific separation of reasoning and final content.
+
+The original Qwen3-32B, Apertus-target, Mistral-Small and GLM-Air selection is archived in `configs/models.legacy.json`. It is not the revised target roster.
 
 The cards establish checkpoint identity, licensing information and supported use. They do not certify performance on this experiment. Record exact revisions and actual serving settings during collection.

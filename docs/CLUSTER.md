@@ -1,192 +1,155 @@
-# One-node handoff
+# Frontier-model cluster handoff
 
-Allocation assumption: one node, four GPUs, available for roughly 48–72 hours. That is 192–288 allocated GPU-hours before setup overhead. This is an allocation budget, not a throughput measurement.
+Revised 2026-11-06. Allocation assumption remains one node with four GPUs for 48–72 hours. The target choices now prioritize full checkpoints. Their deployment needs must be reconciled with the actual node before collection.
 
-The supplied CSCS link describes four Grace-Hopper modules per GH200 node. The owner also mentioned H200 GPUs. Do not treat these as identical. GH200 has a Grace Arm CPU; a standalone H200 node may use an x86 CPU and different GPU memory. Determine the actual hardware before selecting an image or estimating model capacity.
+## Model roles and memory
 
-## 1. Get the package and check it without GPUs
+| Key | Checkpoint | Role |
+|---|---|---|
+| `glm53` | `zai-org/GLM-5.3` | Target; owner reports an existing installation |
+| `deepseek_r1` | `deepseek-ai/DeepSeek-R1-0528` | Full R1 target |
+| `qwen_full` | `Qwen/Qwen3.5-397B-A17B-FP8` | Proposed third full-size target family |
+| `apertus_auditor` | `swiss-ai/Apertus-70B-Instruct-2509` | Reserved auxiliary auditor; human review required |
+
+Qwen is a proposed comparator, not a claim that it is the latest flagship. Do not replace a full target with Distill, Air, Flash or a smaller model to make a run start. The prior targets are archived in `configs/models.legacy.json` and are not the main campaign.
+
+Four H200 GPUs have 564 GB nominal aggregate HBM. Published FP8 safetensor shards occupy about 688.6 GB for R1-0528 and 755.6 GB for GLM-5.3. These are file sizes, not a full runtime memory model, but they already exceed that capacity. GLM's official vLLM recipe uses eight H200s for native FP8. Sequential loading prevents models from competing for memory; it does not make one oversized checkpoint fit. [H200 specifications](https://www.nvidia.com/en-us/data-center/h200/), [R1 files](https://huggingface.co/deepseek-ai/DeepSeek-R1-0528/tree/main), [GLM serving recipe](https://recipes.vllm.ai/zai-org/GLM-5.3).
+
+The operator checks for GLM-5.3 on the node and uses it if present, or downloads the pinned checkpoint if absent. Obtain launch details from the node rather than asking the study owner to relay them. Reuse the installed GLM deployment after recording its actual precision, quantized artifact if any, CPU offload, and server command. Check `nvidia-smi` and CPU architecture: the supplied CSCS GH200 link is not a description of a conventional H200 node. Host RAM is not additional HBM at the same speed. A four-GPU quantized/offloaded deployment may work, but its throughput and behaviour must be measured. Precision is part of the evaluated system.
+
+## 1. Check the software without GPUs
 
 ```bash
 git clone https://github.com/pkrajput/HF_safety.git
 cd HF_safety
-python3 --version
 python3 -m unittest discover -s tests -v
 python3 -m auditlab.cli plan --stage network_pilot --out manifests/network-pilot.json
-python3 -m auditlab.cli run --models configs/models.json --model qwen --mock --manifest manifests/network-pilot.json --out results/mock
+python3 -m auditlab.cli run --models configs/models.json --model deepseek_r1 --mock --manifest manifests/network-pilot.json --out results/mock --workers 2
 ```
 
-Python must be 3.11 or later. The harness itself uses only the standard library. No credentials or paid endpoint are required for this smoke test. Keep mock results separate from all real results.
+Python 3.11 or later is required. The harness uses the standard library. Mock output is not a model observation.
 
-## 2. Establish the serving environment
+## 2. Record the actual deployment before the GPU window
 
-Prefer your site's existing working vLLM environment or an administrator-provided container. Check its CPU architecture and GPU support. Do not use an x86-only image on a GH200 Arm node.
+`configs/models.lock.json` pins the reference artifacts by repository commit. No weights were downloaded during preparation. Preserve those pins rather than re-pinning automatically. For a deliberately changed artifact, use `pin` to create a new lock file and preserve its base checkpoint identity in the deployment record.
 
-On CSCS, Container Engine supports `srun --environment=<EDF-name> ...`. Create an EDF from the site's working image and mount the project, model cache, and result directories. A structural example follows; replace every placeholder with a real path/image available to the allocation.
+All three target configs initially have `deployment_status: requires_site_profile`. This means there is no validated four-GPU launch configuration in this repository. It does not mean the owner's installation is absent. Managed launch stops before loading an unprofiled target; attach to a working endpoint with an explicit deployment record instead.
 
-```toml
-image = "<site-validated-vllm-image-for-this-architecture>"
-mounts = ["<absolute-project-root>:<absolute-project-root>", "<absolute-scratch-root>:<absolute-scratch-root>"]
-workdir = "<absolute-project-root>/HF_safety"
-```
-
-Save the EDF in the location used by your CSCS account, commonly `$HOME/.edf/`. Record the immutable image digest in `AUDITLAB_IMAGE_DIGEST`. The repository does not pretend to supply a validated CSCS image; it must be chosen for the actual node.
-
-For a conventional H200 node with a compatible Python/CUDA stack, an isolated environment is another option:
+Copy the lock file to a site configuration, then set the real served alias, context, precision, reasoning settings and request timeout. Preserve repository and revision as the base checkpoint identity when recording a derived installed artifact. Keep the site configuration fixed within a collection.
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install --upgrade pip
-.venv/bin/python -m pip install vllm huggingface_hub
-.venv/bin/python -m pip install -e .
+cp configs/models.lock.json configs/models.site.json
 ```
 
-This installs the current packages and is a bootstrap procedure, not a reproducible version lock. Once the server passes its pilot, save `pip freeze`, the image digest if used, CUDA/driver details, and the launch command. Keep those versions unchanged for confirmation. Optional replay capture additionally needs Transformers, PyTorch, Accelerate, and Safetensors compatible with the chosen checkpoints. Do not replace a working site environment merely to follow this example.
+An installed endpoint needs a deployment JSON with these fields:
 
-## 3. Pin weights and prepare storage before the GPU window
+```json
+{
+  "base_repository": "zai-org/GLM-5.3",
+  "base_revision": "<40-character base commit from your verified installation>",
+  "precision": "<same exact precision description as models.site.json>",
+  "artifact": {
+    "repository": "<actual artifact repository>",
+    "revision": "<40-character artifact commit>"
+  },
+  "offload": "<none, or the actual offload configuration>",
+  "launch_command": "<actual server launch command>",
+  "operator_verified": true
+}
+```
+
+For locally converted weights, `artifact` can instead contain `local_manifest_sha256`, the SHA-256 of a retained manifest of the actual files and their checksums. Placeholders are not valid records. `operator_verified` records the colleague's verification; it cannot establish remote weight identity by itself. The wrapper binds the full deployment-record hash into episode identity so that a changed deployment cannot silently resume old results.
+
+Use the site's working serving environment. For GH200, its image must support Arm; a conventional H200 host may be x86. Prefer an existing validated vLLM/SGLang installation to an untested reinstall. Record package versions, image digest, GPU details and the full launch command. The harness requires an OpenAI-compatible chat endpoint **and exact chat tokenization at `/tokenize`**. Chat compatibility alone is insufficient. An existing server with a different tokenization API needs a validated adapter before collection; do not estimate token counts.
+
+For new weight downloads, run on a permitted transfer service before the allocation:
 
 ```bash
-python3 -m auditlab.cli pin --models configs/models.json --out configs/models.lock.json
+python3 scripts/download_models.py --models configs/models.lock.json --root /absolute/scratch/models --only deepseek_r1
 ```
 
-This makes small metadata requests and pins exact repository commits. It does not download weights. Keep the resulting lock file with the paper artifacts. Re-pinning later creates a different experimental configuration.
-
-Allow approximately 1 TB of scratch capacity for these four unquantized model snapshots plus room for logs and activations. This is a conservative storage planning allowance, not a measured download size. The candidate models' approximate BF16 weight sizes are 64 GB (Qwen), 140 GB (Apertus), 48 GB (Mistral), and over 200 GB (GLM-Air), before framework/KV overhead. The full GLM-4.5 is much larger than GLM-4.5-Air and is not interchangeable with it.
-
-Set task-specific paths rather than repurposing system variables:
+For GLM, first inspect the running server, model directories and local Hugging Face cache. If it is absent:
 
 ```bash
-export AUDITLAB_ROOT=/absolute/path/HF_safety
-export AUDITLAB_MODEL_ROOT=/absolute/scratch/path/audit-models
-python3 scripts/download_models.py --root "$AUDITLAB_MODEL_ROOT"
+python3 scripts/download_models.py --models configs/models.lock.json --root /absolute/scratch/models --only glm53
 ```
 
-Download only selected models with `--only qwen apertus mistral` or `--only glm_auditor`. Do downloads on a permitted transfer/login service before the allocation where possible. Check site policy and network availability. Do not put an access token in a script or Git; use the Hugging Face client's normal local authentication if required.
+Avoid downloading GLM again when its verified weights already exist. The operator or executing agent prepares the deployment record from this inspection; the study owner does not need to supply it or approve it separately. Allow storage based on the chosen artifacts; the former 1 TB allowance for all models is no longer appropriate.
 
-### Existing local weights
+## 3. Pilot the existing GLM server first
 
-Check the installed checkpoint's repository, exact commit, dtype and tokenizer. The expected layout is:
-
-```text
-<AUDITLAB_MODEL_ROOT>/<model-id>/<40-character-revision>/config.json
-<AUDITLAB_MODEL_ROOT>/<model-id>/<40-character-revision>/...weight files...
-<AUDITLAB_MODEL_ROOT>/<model-id>/<40-character-revision>/auditlab_snapshot.json
-```
-
-You can symlink that revision directory to an already complete snapshot. The `auditlab_snapshot.json` file must contain the corresponding configuration object from `configs/models.lock.json`. Create it only after independently confirming the installed revision; the file is a provenance record, not a way to make unknown weights correct. If the installed GLM is another release, edit `configs/models.json`, pin it, and calibrate that release. The auditor family must remain distinct from the targets.
-
-## 4. Pilot one model inside the allocation
-
-The wrapper starts a local-only inference server and the harness in the same job. Tensor parallelism defaults to four GPUs for all models to avoid model-specific resource assumptions initially. It can be reduced after profiling, before freezing. Inference runs one family at a time.
+Configure its alias to match `served_name` in the site config. The preflight checks that alias, token accounting and a complete JSON answer. The name reported by `/v1/models` is not proof of the weights; use the deployment record as well.
 
 ```bash
-python3 scripts/collect_hardware.py artifacts/hardware.json
-python3 scripts/serve_and_run.py --model qwen --model-root "$AUDITLAB_MODEL_ROOT" --manifest manifests/network-pilot.json --results results/pilot --workers 2 --limit 4 --wall-seconds 3600
+python3 -m auditlab.cli plan --stage network_pilot --team-sizes 4 --budget-profile frontier --out manifests/frontier-pilot.json
+python3 scripts/serve_and_run.py --models configs/models.site.json --model glm53 --endpoint http://127.0.0.1:8000 --deployment-record /absolute/path/glm53-deployment.json --manifest manifests/frontier-pilot.json --results results/frontier-pilot --workers 2 --limit 4 --wall-seconds 3600
 ```
 
-Start with low concurrency, then test 4 or 8 independent episodes after measuring memory and prefill load. Concurrency is serving throughput; the `agents` field is the number of experimental agents in one team. They are different concepts.
+The wrapper attaches without starting or stopping the existing server. A `--limit 4` run is an engineering check only; it does not cover the full pilot. Run all pilot conditions before freezing the design. The explicit four-agent pilot preserves all policy, guard, pressure and language controls.
 
-The wrapper records GPU names/memory, architecture, package versions, launch parameters, server logs, and model identity. It verifies `/health`, `/tokenize`, and chat completion. Its memory setting starts at 0.85 and context length at 16,384. It does not silently quantize, truncate histories, or reduce model size. If a model does not load, retain the failure log and change the engineering configuration before generating a new manifest.
+The frontier profile allows 8,192 generated tokens per action and per report, counting reasoning and final output together. Its phase-1 generation allowance is 131,072 tokens and continuation allowance is 196,608 tokens. These are initial caps, not an assertion that every model needs that much or can finish under them. Review truncation, incomplete answers, task success and context exhaustion. Change the profile before confirmation if it clips reasoning. Do not disable reasoning to improve throughput without treating that as a different configuration.
 
-Before the main runs, verify:
+Raw `reasoning`/`reasoning_content` fields remain in response journals; action parsing uses final content. Chat-template handling of previous reasoning is part of the model configuration. The default 65,536-token serving context also needs a pilot. An input-ID match is necessary for replay, but does not prove numerical equivalence across engines.
 
-1. JSON format works without a substantial invalid/truncation rate.
-2. Each model can solve the public task and discover the authorised reference path.
-3. Output-language instructions are understood and do not merely suppress useful output.
-4. The vulnerable and hardened environments have the expected action-level behaviour.
-5. Measured total node throughput, including prompt processing, supports the chosen collection size.
+## 4. Generate hundreds of swarm runs
 
-The temperature/template settings need not be numerically identical across model families; preserve recommended stable settings and report them. Within each model, keep them fixed across treatments. The default Qwen configuration turns off its explicit thinking mode. If choosing thinking mode, give it an adequate per-call budget and treat it as a distinct configuration.
-
-## 5. Submit through Slurm
-
-Use the account and partition actually granted to your colleague. The script intentionally does not invent them. Check the queue's time, CPU, and GPU request conventions; `#SBATCH` settings are starting values and can be overridden on submission.
+After capability, language and throughput checks, create balanced manifests:
 
 ```bash
-mkdir -p logs
-export AUDITLAB_ROOT=/absolute/path/HF_safety
-export AUDITLAB_MODEL_ROOT=/absolute/scratch/path/audit-models
-export AUDITLAB_MODEL=qwen
-export AUDITLAB_MANIFEST=manifests/network-pilot.json
-export AUDITLAB_RESULTS=/absolute/scratch/path/audit-results/pilot
-export AUDITLAB_WORKERS=4
-export AUDITLAB_MODE=run
-export AUDITLAB_EDF=<your-working-edf-name>
-sbatch --account=<your-allocation> --partition=<your-gpu-partition> scripts/run_cscs.sbatch
+for stage in ste duration network_stress network_repair
+do
+  python3 -m auditlab.cli plan --stage "$stage" --fixtures 12 --team-sizes 4 --repetitions 1 --budget-profile frontier --out "manifests/frontier-$stage.json"
+done
+python3 -m auditlab.cli estimate --manifest manifests/frontier-ste.json --model-count 3
 ```
 
-On a conventional environment without CSCS Container Engine, leave `AUDITLAB_EDF` unset and set `AUDITLAB_PYTHON` to the environment's absolute Python executable. The standard Slurm path uses `srun` without `--environment`. Do not set both paths unnecessarily. The wrapper's `vllm` executable must be on that environment's `PATH`.
+| Stage | Fresh swarms per target | Paired reports per target |
+|---|---:|---:|
+| STE | 216 | 648 |
+| Duration | 24 | 648 |
+| Poisoned stress | 96 | 576 |
+| Guardrail repair | 48 | 144 |
+| Total | 384 | 2,016 |
 
-The example job limit is 8 hours, with a 6-hour request-start budget. Model loading and shutdown need headroom. Submit sequential chunks or use the site's allowed longer duration. An interrupted in-flight request is preserved as unresolved and will not be silently repeated. A stale `writer.lock` must be inspected against running jobs before removal.
+Three targets therefore receive 1,152 fresh four-agent swarms and 6,048 paired reports. The main runs initialize 4,608 agent contexts. These are planned counts, not completed observations. Current fixtures only permute relay labels; do not describe the count as independent task topologies.
 
-## 6. Freeze and collect
+`--workers 2` means two concurrent swarms sharing one loaded model. `--team-sizes 4` means four separate agent contexts within each team. Agents currently take turns. Hundreds of swarms run as queued batches, not hundreds of weight copies. Add solo controls using separate manifests with `--team-sizes 1`, and budget/count them separately. Repetitions change sampling seeds; they do not create new linguistic or network structures.
 
-After the pilot and material review, choose the confirmatory sample size and save it in the protocol. Regenerate manifests after the last code change because they include the source hash.
+If measured throughput requires a smaller balanced campaign, eight fixtures give 256 swarms per target. Choose the number prospectively. The 48–72-hour allocation does not guarantee either count; include model loading, prompt processing, reasoning, reports, audits and failures in profiling. Do not stop collection selectively after interesting cases.
+
+## 5. Finish one model before the next
+
+For the already running GLM endpoint:
 
 ```bash
-python3 -m auditlab.cli plan --stage ste --fixtures 6 --out manifests/ste.json
-python3 -m auditlab.cli plan --stage duration --fixtures 6 --out manifests/duration.json
-python3 -m auditlab.cli plan --stage network_stress --fixtures 6 --out manifests/network-stress.json
-python3 -m auditlab.cli plan --stage network_repair --fixtures 6 --out manifests/network-repair.json
-python3 -m auditlab.cli estimate --manifest manifests/duration.json
+python3 scripts/serve_and_run.py --models configs/models.site.json --model glm53 --endpoint http://127.0.0.1:8000 --deployment-record /absolute/path/glm53-deployment.json --manifests manifests/frontier-ste.json manifests/frontier-duration.json manifests/frontier-network_stress.json manifests/frontier-network_repair.json --results results/frontier --workers 2 --wall-seconds 28800
 ```
 
-Run the same frozen manifests for qwen, apertus and mistral. Use separate output roots for each stage. Within a stage, model IDs have separate subdirectories. Keep all condition cells for the selected task fixtures; do not stop after a promising set of failures. The CLI's `--limit` is for engineering pilots, not a substitute for balanced confirmatory sampling.
+`--manifests` keeps the same model resident while running the stages in order. Outputs use `results/frontier/<stage>/<model-id>/`. The wall allowance is shared across these stages. Safe-boundary pauses and missing observations are preserved. Review stage completion before proceeding; rerun unchanged configurations to resume. Remaining stage assignments can be summarized once their manifests/model registrations exist.
 
-For inexpensive scope probes while each target is resident:
+After GLM's selected collection, the operator stops that externally managed server. Load the full R1 deployment, run the same manifests, stop it, then run the proposed third family. Do not leave the old externally managed server resident when loading another model.
+
+For a validated managed vLLM profile, set `deployment_status` to `site_validated`, record all launch/offload options in `serve_extra`, and provide `local_snapshot_path` or the standard model-root layout. The snapshot's `auditlab_snapshot.json` must match repository, revision and precision. This is a record of a verified installation, not a way to relabel unknown weights.
 
 ```bash
-python3 -m auditlab.cli semantic --model qwen --endpoint http://127.0.0.1:8000 --out results/semantic/qwen --fixtures 3
+python3 scripts/serve_and_run.py --models configs/models.site.json --model deepseek_r1 --model-root /absolute/scratch/models --manifests manifests/frontier-ste.json manifests/frontier-duration.json manifests/frontier-network_stress.json manifests/frontier-network_repair.json --results results/frontier --workers 2 --wall-seconds 28800
 ```
 
-Here `fixtures` controls sampling repetitions of the finite probe bank. It is not the number of independent language templates. The wrapper also accepts `--mode semantic`.
+Managed mode waits for and then stops its own server. It rejects obvious all-GPU memory shortfalls before starting when local safetensor sizes and GPU memory are available. Passing this coarse check is not a fit guarantee. It does not select quantization, add offload, or substitute a different model automatically.
 
-## 7. Use GLM as the auditor
+For CSCS Slurm, `scripts/run_cscs.sbatch` accepts `AUDITLAB_MODELS`, `AUDITLAB_MODEL`, `AUDITLAB_RESULTS`, `AUDITLAB_MANIFEST`, and optional `AUDITLAB_ENDPOINT`/`AUDITLAB_DEPLOYMENT_RECORD`. Managed mode also needs `AUDITLAB_MODEL_ROOT`. Set the actual account, partition, EDF/container and interpreter paths. The four-GPU request is an allocation placeholder, not proof that native FP8 fits.
 
-When GLM is resident, use `--mode audit` in the wrapper or the following command against its endpoint:
+## 6. Audit and preserve the collection
+
+Run Apertus only after unloading the target, with `--mode audit`. Its family is distinct from every target. Human review must include condition-balanced negatives as well as flagged reports. Auditor failure or disagreement is not ground truth.
 
 ```bash
-python3 -m auditlab.cli audit --model glm_auditor --results results/duration --out results/audit-duration --limit 200
-python3 -m auditlab.cli propose --model glm_auditor --out artifacts/development-proposal.json
+python3 scripts/serve_and_run.py --models configs/models.site.json --model apertus_auditor --model-root /absolute/scratch/models --mode audit --results results/frontier/duration --out results/audit-duration --limit 200
+python3 -m auditlab.cli verify --results results/frontier/duration
+python3 -m auditlab.cli analyze --results results/frontier/duration --out results/frontier-duration-summary.json
+python3 -m auditlab.cli replay-index --results results/frontier/duration --out artifacts/frontier-replay-index.json
 ```
 
-Annotation cost is separate from target inference. Select a condition-balanced sample and verify labels with humans; the default file ordering is an engineering convenience, not a valid sampling scheme for estimating prevalence. The development proposal is saved for review and never changes a confirmatory case. This is not a complete implementation of adaptive auditor RL.
+Retain logs, raw responses, failures, source/manifest hashes, model and deployment identities, and serving-time token IDs. Back up outside scratch. Do not commit weights or generated trajectories to the source repo. A stale writer lock or unresolved remote request needs inspection; no automatic retry is allowed when outcome/cost is unknown.
 
-## 8. Preserve the data needed after the allocation
-
-```bash
-python3 -m auditlab.cli verify --results results/duration
-python3 -m auditlab.cli analyze --results results/duration --out results/duration-summary.json
-python3 -m auditlab.cli replay-index --results results/duration --out artifacts/replay-index.json
-```
-
-Retain full raw results, completed and failed episodes, hashes, scripts, server environment, and model snapshot locations. Store a backup outside ephemeral scratch. Do not put weights, credentials, or large generated trajectories into the source Git repository. Archive data separately with a manifest.
-
-For a small optional activation capture while GPUs remain available:
-
-```bash
-python3 scripts/capture_replay.py --index artifacts/replay-index.json --model qwen --model-root "$AUDITLAB_MODEL_ROOT" --out artifacts/replay-qwen --limit 24
-```
-
-Stop the serving model before loading a second model for capture. The script saves full input token IDs, a few reporting-boundary hidden states, and next-token logits/entropy. It is deliberately limited and has not been run on these GPUs. Validate exact chat-template rendering and token/logit agreement with the serving engine. Mistral's native rendering needs its own validated adapter. The capture script now requires exact serving-time token IDs and refuses absent or mismatched IDs. Matching input IDs still does not prove numerical equivalence across inference engines.
-
-Selected boundary states may miss the causal representation. They do not replace planned intervention runs or full replay access. Reserve actual GPU time for mechanistic discovery and counterfactual tests, even if that means collecting fewer secondary trajectories.
-
-## Suggested time allocation
-
-For a 48-hour window, a starting plan is 4 hours for load/pilot checks, 24 hours for target trajectories and probes, 6 hours for secondary controls, 4 hours for GLM auditing, 6 hours for mechanistic replay, and 4 hours for failures and backup. These are scheduling proposals. For 72 hours, expand independent fixtures and mechanistic tests after profiling rather than increasing all factorial dimensions.
-
-Use measured campaign wall time to revise this plan before confirmation. Do not promise that the entire default suite fits the allocation. Each network design has a finite token upper bound; actual runtime depends heavily on model, prompt lengths, stop behaviour, serving software and concurrency.
-
-## Network-v2 collection details
-
-The runner recognises network-v2 manifests automatically; the server/Slurm launch commands do not change. Use separate result roots for `ste`, `duration`, `network_stress`, and `network_repair`. The old `core`/`compute` names still run legacy arithmetic fixtures and are not the revised main study.
-
-For duration, each checkpoint creates 0/8/24-opportunity continuation branches. Each receives fresh fair missions and keeps its conversations. Reports always concern the closed phase-1 period. The original phase-1 ledger is given once before branching, and the ledger-reminder condition repeats it later. Reporting is independent of unused task budget.
-
-The stress stage includes all four solvability-by-pressure cells. Blocked and poisoned cases cannot obtain a required receipt through any available action. They remain separate from fair tasks in the analyzer. No truthful blocked response is removed.
-
-Before confirmation, test whether 24-opportunity continuations fit the selected model context length. Context exhaustion is retained as missing data, never as honesty. If limits are unsuitable, adjust the configuration before freezing and regenerate manifests. The default 16k context and generation settings are engineering starting points.
-
-The result skeleton records every assigned report before collection. A later branch failure cannot delete earlier observations. Registered model configs under `results/<stage>/models/` let the analyzer count unstarted cases in the manifest. A collection interrupted at a safe request boundary can resume using the same command and code. Pending remote requests are never automatically regenerated. Request artifacts and checkpoints are bound to the observer journal.
-
-The default full stage counts per target are 28 pilot checkpoints, 216 STE checkpoints, 24 duration checkpoints, 96 stress checkpoints, and 48 repair checkpoints. These are not all independent task templates: the initial network template currently varies only relay labels. Sample size and broader task variation require research review.
+The generic Transformers activation-capture script is disabled for these configurations until `capture_supported` is explicitly validated. It must not expand a quantized frontier model into BF16 and hope that it fits. A faithful frontier replay/intervention adapter remains separate work. Reserve node time for that validation rather than spending the entire window on trajectories.

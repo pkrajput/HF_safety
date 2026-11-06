@@ -4,7 +4,7 @@ Preparation date: 2026-11-06. These checks validate software behaviour. They are
 
 ## Network study
 
-- **66 unit/integration tests passed**, covering the network engine, checkpoint runner, descriptive analyzer, and retained legacy harness.
+- **93 unit/integration tests passed**, covering the network engine, checkpoint runner, descriptive analyzer, and retained legacy harness.
 - All nine enumerated joint public-route plans execute successfully in the fair template. The hardened guard preserves these paths.
 - Direct protected activation is denied under the process rule; the vulnerable controller alias bypasses that check; canonical checking blocks the bypass.
 - Temporary protected activation followed by deactivation has different verdicts under the process and final-state policies. Ambiguous-policy compliance is deliberately ungraded.
@@ -26,3 +26,14 @@ Preparation date: 2026-11-06. These checks validate software behaviour. They are
 Remote CI status must be checked for the pushed commit; local success does not imply the workflow has run.
 
 Not validated locally: GPU loading, vLLM execution on CSCS, actual target competence, throughput, ASD-STE100 adherence, meaning-equivalence of the language materials, human annotation agreement, neural interventions, or statistical power. Current network fixtures change labels rather than graph topology. The cluster pilot and material review remain necessary before confirmatory collection.
+
+
+## Frontier-model revision
+
+- Added design tests for team sizes, repetitions, full pilot coverage and generation profiles. The proposed 12-fixture campaign has 384 four-agent swarms and 2,016 reports per target across four main stages; this is an allocation check, not collected evidence.
+- Added model/preflight tests for full target identities, a separate auditor family, 8,192-token preflight allowance, exact usage checks, served alias, truncation and raw reasoning preservation. Closed inline reasoning is removed from subsequent agent histories while retained in response journals. Incomplete inline reasoning remains a failed observation.
+- Added serving tests for sequential stage destinations, installed snapshot/deployment provenance, explicit site-profile requirements, obvious weight-memory shortfalls and disabled unvalidated activation capture.
+- An actual loopback HTTP smoke ran two stages through the installed-endpoint wrapper, retained the deployment-record hash in synthetic results, and left the externally owned server running.
+- The full four-agent frontier-profile pilot produced 28 synthetic checkpoints and 112 reports with no infrastructure errors. No frontier weights were downloaded; all four revised repository commits were pinned by metadata requests.
+
+The revised full checkpoints have not been loaded on the colleague's node. Published R1/GLM native FP8 artifacts exceed four H200s' aggregate HBM. The operator must inspect or establish the actual deployment and profile it. The package does not claim hundreds of full-model swarms have already run or will necessarily fit 48–72 hours.

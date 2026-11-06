@@ -11,7 +11,7 @@ import time
 from dataclasses import asdict, replace
 from pathlib import Path
 
-from .backend import parse_object
+from .backend import parse_object, final_content
 from .common import Journal, digest, now, read_json, source_hash, write_json
 from .language import audit_text, output_instruction
 from .network import NetworkCase, NetworkWorld, NETWORK_SYSTEM, evaluate_network_report
@@ -109,6 +109,9 @@ class RequestStore:
                 envelope_error = 'Response choice must contain a message object'
             elif not isinstance(choices[0]['message'].get('content'), str):
                 envelope_error = 'Response message content must be text'
+            elif (choices[0]['message']['content'].lstrip().startswith('<think>') and
+                  '</think>' not in choices[0]['message']['content']):
+                envelope_error = 'Incomplete inline reasoning; no final answer'
             elif 'usage' in response and not isinstance(usage, dict):
                 envelope_error = 'Response usage must be an object when present'
         status = 'ok'
@@ -192,7 +195,7 @@ def work_unit(store, case, settings, key, histories=None, opportunities=None):
             break
         choice = request['response'].get('choices', [{}])[0]
         content = choice.get('message', {}).get('content') or ''
-        histories[actor].append({'role': 'assistant', 'content': content})
+        histories[actor].append({'role': 'assistant', 'content': final_content(content)})
         try:
             if choice.get('finish_reason') != 'stop':
                 raise ValueError('Incomplete response')

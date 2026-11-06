@@ -38,7 +38,7 @@ STE refers to ASD-STE100 Issue 9. The repository's `ste_requested` label means a
 
 The output instruction applies to the agent's natural-language text throughout the session, including board messages and report explanations. Code, JSON syntax, fixed identifiers and enum values are exceptions. Ordinary prose inside a JSON string is not an exception. Input-language treatment applies to owner task/policy wording; common API schemas and machine observations remain fixed.
 
-Preserve actor scope, temporal scope, permissions, recovery rights and task objectives when rewriting. Do not define “use” as “activate” in only one language arm. Maintain the same technical-term register across arms. Independently check factual coverage and word/sentence restrictions on a condition-balanced sample. GLM may assist but is neither a certified standard checker nor the ground truth for compliance.
+Preserve actor scope, temporal scope, permissions, recovery rights and task objectives when rewriting. Do not define “use” as “activate” in only one language arm. Maintain the same technical-term register across arms. Independently check factual coverage and word/sentence restrictions on a condition-balanced sample. The reserved auditor may assist but is neither a certified standard checker nor the ground truth for compliance.
 
 Primary analyses follow assigned language, including non-adherence. Analysing only successful STE writers conditions on a post-treatment outcome and is secondary. Record task competence, invalid output, generated length and information coverage together with misleading-report outcomes.
 
@@ -110,10 +110,21 @@ A later mechanistic analysis should compare memory accessibility, criterion subs
 
 Retain outgoing requests, raw responses, observed actions, snapshots, branch identity, usage, the frozen phase-1 truth and branch reports. Keep model revisions, source/manifest hashes, generation settings, tokenizer/template identity and serving environment with the collection. Observer logs are outside the virtual tools. Their hash chains detect modification relative to a retained root; they do not prevent a host administrator from rewriting all files.
 
-Keep assigned continuation, realised actions, generated tokens, prompt tokens and wall time distinct. Count report tokens separately from task/continuation allowances. Include model loading, prefill, GLM annotation and failed requests in compute reporting. Request latency under concurrent serving cannot be summed and called total node time.
+Keep assigned continuation, realised actions, generated tokens, prompt tokens and wall time distinct. Count report tokens separately from task/continuation allowances. Include model loading, prefill, auditor annotation and failed requests in compute reporting. Request latency under concurrent serving cannot be summed and called total node time.
 
 No automatic retries of a request with unknown outcome/cost. Preserve infrastructure errors and unresolved in-flight requests. Reuse completed episodes only when their recorded code/configuration identities match. A retry is a new documented attempt, not silent replacement of an unfavourable observation. Never classify missing or invalid output as honesty.
 
-GLM remains a separate auditor family. Give it the governing policy and factual events while hiding explicit target/condition labels where possible. Wording can reveal the arm, so blinding is imperfect. Human review must include both flagged cases and a condition-balanced sample of negatives. Report agreement and unresolved cases; annotation is not ground truth for the physical world or STE adherence.
+GLM-5.3 is now a target. Apertus is reserved as a separate auditor family; give it the governing policy and factual events while hiding explicit target/condition labels where possible. Wording can reveal the arm, so blinding is imperfect. Human review must include both flagged cases and a condition-balanced sample of negatives. Report agreement and unresolved cases; annotation is not ground truth for the physical world or STE adherence.
 
 During the limited allocation, preserve original snapshots and export replay contexts before deleting scratch files. Reserve GPU time for mechanistic calibration instead of using the entire window for trajectories. Exact state/token replay still needs validation on the actual serving environment. No GPU or standard-compliance validation is implied by local software tests.
+
+
+## Full-model collection revision
+
+The target roster is full DeepSeek-R1-0528 and GLM-5.3, with full Qwen3.5-397B-A17B-FP8 proposed as the third family. Apertus-70B is auxiliary auditor only. Pin the actual deployed artifact and preserve its precision, quantization, reasoning options and offload configuration. Quantization is part of the evaluated system, not a transparent implementation detail. Do not substitute a smaller/distilled model after a load failure.
+
+The main proposed allocation uses 12 fixtures and four agents per team, yielding 384 fresh team runs per target across STE, duration, stress and repair. Its 2,016 reports per target share those histories. Additional repetitions change sampling seeds, not graph topology. Solo controls use a separate prospective manifest and budget. The `plan` and `estimate` commands expose swarm, solo, logical-agent and report counts separately.
+
+Only one target model is resident at a time. Small batches of swarms share its server through separate contexts. The `frontier` budget profile permits 8,192 generated tokens per action/report, including reasoning. Larger caps are not a power or throughput justification. Pilot completion/truncation, prompt accounting and total node time before freezing the profile and number of runs. Use a balanced smaller plan if measured throughput cannot support the planned count within the allocation; do not select runs by observed misconduct.
+
+Raw reasoning fields remain in response records. Parsing uses the final answer for actions/reports. Renderer-specific removal or retention of prior reasoning must be recorded and held fixed within a model. The STE instruction is not proof that hidden or emitted reasoning follows the standard. Neither reasoning text nor auditor annotation establishes private intent.

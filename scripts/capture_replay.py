@@ -22,13 +22,18 @@ entries = [e for e in json.loads(Path(args.index).read_text()) if e['model']['id
 if not entries:
     raise SystemExit('No matching replay contexts')
 config = entries[0]['model']
+if not config.get('capture_supported', False):
+    raise SystemExit('Activation capture is disabled for this deployment. A validated replay adapter '
+                     'must preserve its precision, placement and chat rendering; do not load frontier '
+                     'weights through the generic BF16 capture path. Retain the replay index.')
 if config['family'] == 'mistral' and '--tokenizer-mode' in config.get('serve_extra', []):
     raise SystemExit('Native Mistral template requires a separately validated replay adapter. '
                      'Retain the raw requests; use Qwen/Apertus for this capture.')
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-snapshot = Path(args.model_root)/args.model/config['revision']
+snapshot = (Path(config['local_snapshot_path']).expanduser() if config.get('local_snapshot_path')
+            else Path(args.model_root)/args.model/config['revision'])
 tokenizer = AutoTokenizer.from_pretrained(snapshot, local_files_only=True)
 model = AutoModelForCausalLM.from_pretrained(snapshot, torch_dtype=torch.bfloat16,
                                            device_map='auto', local_files_only=True)

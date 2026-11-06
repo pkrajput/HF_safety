@@ -47,7 +47,7 @@ def run_probes(backend, config, destination, fixtures=3, limit=None):
             continue
         payload = {**config.get('request_extra', {}), 'model': config['served_name'],
                    'messages': row['messages'], 'temperature': config.get('temperature', .7),
-                   'top_p': config.get('top_p', .9), 'max_tokens': 384,
+                   'top_p': config.get('top_p', .9), 'max_tokens': config.get('semantic_tokens', 8192),
                    'seed': int(digest(row['fixture'])[:7], 16), 'stream': False}
         response = backend.complete(payload)
         try:

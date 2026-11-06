@@ -4,13 +4,20 @@ import time
 import urllib.request
 
 
-def parse_object(text):
-    """Parse one JSON action. No extraction from arbitrary prose or reasoning."""
+def final_content(text):
+    """Return final text after a completed inline thinking block; keep raw elsewhere."""
     if not isinstance(text, str):
         raise ValueError('missing text content')
-    # Some local servers return an explicit completed thinking block in content.
     if '</think>' in text:
-        text = text.rsplit('</think>', 1)[1]
+        return text.rsplit('</think>', 1)[1]
+    if text.lstrip().startswith('<think>'):
+        raise ValueError('Incomplete inline reasoning; no final answer')
+    return text
+
+
+def parse_object(text):
+    """Parse one JSON action. No extraction from arbitrary prose or reasoning."""
+    text = final_content(text)
     text = text.strip()
     if text.startswith('```json\n') and text.endswith('\n```'):
         text = text[8:-4]
@@ -35,6 +42,14 @@ class HTTPBackend:
         request = urllib.request.Request(self.endpoint + path, data=json.dumps(payload).encode(),
                                          headers=headers)
         # No automatic retry: a timeout may have consumed generation compute.
+        with urllib.request.urlopen(request, timeout=self.timeout) as response:
+            return json.load(response)
+
+    def models(self):
+        headers = {}
+        if os.environ.get('AUDITLAB_API_KEY'):
+            headers['Authorization'] = 'Bearer ' + os.environ['AUDITLAB_API_KEY']
+        request = urllib.request.Request(self.endpoint+'/v1/models', headers=headers)
         with urllib.request.urlopen(request, timeout=self.timeout) as response:
             return json.load(response)
 
@@ -121,3 +136,42 @@ class MockBackend:
                 'usage': {'prompt_tokens': self.count(messages, {}),
                           'completion_tokens': min(payload['max_tokens'], max(1, len(content)//4))},
                 '_wall_seconds': 0, '_synthetic': True}
+
+
+def preflight(backend, config):
+    """Check the declared served alias, exact accounting and complete JSON output.
+
+    The server's model name is not evidence of weight identity. Site provenance
+    is recorded separately by the serving wrapper.
+    """
+    available = backend.models()
+    ids = {row.get('id') for row in available.get('data', []) if isinstance(row, dict)}
+    if config['served_name'] not in ids:
+        raise ValueError('Expected served model alias absent from /v1/models: '+config['served_name'])
+    maximum = config.get('preflight_tokens', 8192)
+    if type(maximum) is not int or maximum < 1:
+        raise ValueError('preflight_tokens must be a positive integer')
+    messages = [{'role': 'user', 'content': 'Return exactly the JSON object {"ok":true}.'}]
+    extras = config.get('request_extra', {})
+    tokenization = backend.tokenize(messages, extras)
+    count = tokenization['count']
+    if count+maximum > config['context_length']:
+        raise ValueError('Preflight generation allowance exceeds configured context')
+    response = backend.complete({**extras, 'model': config['served_name'], 'messages': messages,
+        'temperature': config.get('temperature', .6), 'top_p': config.get('top_p', .95),
+        'max_tokens': maximum, 'seed': 71, 'stream': False})
+    try:
+        choice = response['choices'][0]
+        report = parse_object(choice['message']['content'])
+        if choice.get('finish_reason') != 'stop' or set(report) != {'ok'} or report['ok'] is not True:
+            raise ValueError('Incomplete or invalid preflight answer')
+        usage = response['usage']
+        if not isinstance(usage, dict):
+            raise ValueError('Preflight usage must be an object')
+        if (any(type(usage.get(k)) is not int or usage[k] < 0 for k in ('prompt_tokens', 'completion_tokens')) or
+            usage['prompt_tokens'] != count or usage['completion_tokens'] > maximum):
+            raise ValueError('Preflight token accounting mismatch')
+    except (KeyError, IndexError, TypeError, ValueError) as exc:
+        raise ValueError('Preflight failed; inspect reasoning parser, budgets and token accounting: '+str(exc)) from exc
+    return {'declared_served_model': config['served_name'], 'prompt_tokenization': tokenization,
+            'generation_allowance': maximum, 'response': response}

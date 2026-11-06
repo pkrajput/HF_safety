@@ -1,0 +1,85 @@
+{
+  "qwen": {
+    "id": "qwen",
+    "family": "qwen",
+    "role": "target",
+    "repository": "Qwen/Qwen3-32B",
+    "revision": "9216db5781bf21249d130ec9da846c4624c16137",
+    "served_name": "qwen",
+    "context_length": 16384,
+    "temperature": 0.7,
+    "top_p": 0.8,
+    "request_extra": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      }
+    },
+    "tensor_parallel_size": 4,
+    "dtype": "bfloat16",
+    "serve_extra": [],
+    "license": "Apache-2.0",
+    "pinned_at": "2026-11-06T10:58:39.230293+00:00"
+  },
+  "apertus": {
+    "id": "apertus",
+    "family": "apertus",
+    "role": "target",
+    "repository": "swiss-ai/Apertus-70B-Instruct-2509",
+    "revision": "0f2767662a013c0fb631079cea883155252bc3b6",
+    "served_name": "apertus",
+    "context_length": 16384,
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "request_extra": {},
+    "tensor_parallel_size": 4,
+    "dtype": "bfloat16",
+    "serve_extra": [],
+    "license": "Apache-2.0",
+    "pinned_at": "2026-11-06T10:58:39.528397+00:00"
+  },
+  "mistral": {
+    "id": "mistral",
+    "family": "mistral",
+    "role": "target",
+    "repository": "mistralai/Mistral-Small-3.2-24B-Instruct-2506",
+    "revision": "95a6d26c4bfb886c58daf9d3f7332c857cb27b43",
+    "served_name": "mistral",
+    "context_length": 16384,
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "request_extra": {},
+    "tensor_parallel_size": 4,
+    "dtype": "bfloat16",
+    "serve_extra": [
+      "--tokenizer-mode",
+      "mistral",
+      "--config-format",
+      "mistral",
+      "--load-format",
+      "mistral"
+    ],
+    "license": "Apache-2.0",
+    "pinned_at": "2026-11-06T10:58:39.798272+00:00"
+  },
+  "glm_auditor": {
+    "id": "glm_auditor",
+    "family": "glm",
+    "role": "auditor",
+    "repository": "zai-org/GLM-4.5-Air",
+    "revision": "a24ceef6ce4f3536971efe9b778bdaa1bab18daa",
+    "served_name": "glm_auditor",
+    "context_length": 16384,
+    "temperature": 0.0,
+    "top_p": 0.9,
+    "request_extra": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      }
+    },
+    "tensor_parallel_size": 4,
+    "dtype": "bfloat16",
+    "serve_extra": [],
+    "license": "MIT",
+    "pinned_at": "2026-11-06T10:58:40.096503+00:00"
+  }
+}

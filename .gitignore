@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+.env
+models/
+results/
+manifests/
+artifacts/
+*.safetensors
+*.pt
+*.log

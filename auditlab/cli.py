@@ -15,6 +15,9 @@ from .design import build_manifest, estimate, validate_manifest
 from .runner import run_episode
 from .semantic import run_probes
 from .world import Case
+from .network import NetworkCase
+from .network_design import STAGES, build_network_manifest, validate_network_manifest, estimate_network
+from .network_runner import run_network_episode
 
 
 def get_model(args):
@@ -31,7 +34,7 @@ def main():
     parser = argparse.ArgumentParser(description='Audit Scope Lab; see README.md and docs/PROTOCOL.md')
     sub = parser.add_subparsers(dest='command', required=True)
     p = sub.add_parser('plan')
-    p.add_argument('--stage', choices=['pilot', 'core', 'prospective', 'repair', 'compute', 'plain_control'], required=True)
+    p.add_argument('--stage', choices=[*STAGES, 'pilot', 'core', 'prospective', 'repair', 'compute', 'plain_control'], required=True)
     p.add_argument('--fixtures', type=int)
     p.add_argument('--out', required=True)
     p = sub.add_parser('estimate')
@@ -75,15 +78,18 @@ def main():
     if args.command == 'plan':
         if args.fixtures is not None and args.fixtures < 1:
             parser.error('--fixtures must be positive')
-        manifest = build_manifest(args.stage, args.fixtures)
+        manifest = (build_network_manifest(args.stage, args.fixtures or 6) if args.stage in STAGES else
+                    build_manifest(args.stage, args.fixtures))
         write_json(args.out, manifest)
         print(json.dumps({'manifest': args.out, 'hash': manifest['design_hash'],
                           'episodes_per_model': len(manifest['cases'])}, indent=2))
     elif args.command == 'estimate':
         if args.measured_output_tps is not None and args.measured_output_tps <= 0:
             parser.error('throughput must be positive')
-        print(json.dumps(estimate(read_json(args.manifest), args.model_count,
-                                  args.measured_output_tps), indent=2))
+        manifest = read_json(args.manifest)
+        value = (estimate_network(manifest, args.model_count) if manifest.get('kind') == 'network-v2' else
+                 estimate(manifest, args.model_count, args.measured_output_tps))
+        print(json.dumps(value, indent=2))
     elif args.command == 'pin':
         models = read_json(args.models)
         for config in models.values():
@@ -130,20 +136,26 @@ def main():
         if args.workers < 1 or args.wall_seconds <= 0 or (args.limit is not None and args.limit < 1):
             parser.error('workers, wall-seconds and limit must be positive')
         manifest = read_json(args.manifest)
-        validate_manifest(manifest)
+        network = manifest.get('kind') == 'network-v2'
+        (validate_network_manifest if network else validate_manifest)(manifest)
         root = Path(args.out)
         root.mkdir(parents=True, exist_ok=True)
         manifest_copy = root/'manifest.json'
         if manifest_copy.exists() and read_json(manifest_copy)['design_hash'] != manifest['design_hash']:
             raise ValueError('Output directory already belongs to another manifest')
         write_json(manifest_copy, manifest)
+        if network:
+            model_path = root/'models'/(config['id']+'.json')
+            if model_path.exists() and read_json(model_path) != config:
+                raise ValueError('Model configuration changed within a collection')
+            write_json(model_path, config)
         selected = manifest['cases'][:args.limit]
         deadline = time.monotonic()+args.wall_seconds
         started = time.monotonic()
         counts = {'complete': 0, 'paused': 0, 'error': 0, 'previous_error': 0}
 
         def work(row):
-            dest = root/config['id']/Case(**row).id
+            dest = root/config['id']/(NetworkCase(**row).id if network else Case(**row).id)
             if (dest/'error.json').exists():
                 return 'previous_error'
             # One process should own a campaign/model. Avoid duplicate writers across invocations.
@@ -156,7 +168,8 @@ def main():
             os.write(fd, str(os.getpid()).encode())
             os.close(fd)
             try:
-                result = run_episode(row, config, backend, dest, deadline)
+                result = (run_network_episode(row, config, backend, dest, manifest['experiment'], deadline)
+                          if network else run_episode(row, config, backend, dest, deadline))
                 return 'complete' if result.get('status') == 'complete' else 'paused'
             except Exception as exc:
                 write_json(dest/'error.json', {'time': now(), 'case': row, 'model': config,
@@ -174,21 +187,52 @@ def main():
         if counts['error'] or counts['previous_error']:
             raise SystemExit(2)
     elif args.command == 'analyze':
-        write_json(args.out, summarize(args.results))
+        manifest_path = Path(args.results)/'manifest.json'
+        if manifest_path.exists() and read_json(manifest_path).get('kind') == 'network-v2':
+            from .network_analysis import summarize_network
+            summary = summarize_network(args.results)
+        else:
+            summary = summarize(args.results)
+        write_json(args.out, summary)
         print(f'Summary saved to {args.out}')
     elif args.command == 'verify':
         paths = list(Path(args.results).rglob('events.jsonl'))
         for path in paths:
             rows = Journal.verify(path)
             result_path = path.parent/'result.json'
-            if result_path.exists() and read_json(result_path)['journal_root'] != rows[-1]['hash']:
-                raise ValueError(f'Final journal root mismatch: {path}')
+            if result_path.exists():
+                result = read_json(result_path)
+                if result.get('kind') == 'network-v2':
+                    if result.get('result_hash') != digest({k:v for k,v in result.items() if k!='result_hash'}):
+                        raise ValueError(f'Result hash mismatch: {path}')
+                    from .network_runner import RequestStore
+                    store = RequestStore(path.parent, None, {})
+                    for artifact in list((path.parent/'requests').glob('*.json'))+list((path.parent/'units').glob('*.json')):
+                        store.load(str(artifact.relative_to(path.parent)))
+                    if (path.parent/'checkpoint.json').exists():
+                        store.load('checkpoint.json')
+                if result.get('status') == 'complete' and result['journal_root'] != rows[-1]['hash']:
+                    raise ValueError(f'Final journal root mismatch: {path}')
         print(f'Verified {len(paths)} observer journals.')
     elif args.command == 'replay-index':
         entries = []
         for path in sorted(Path(args.results).rglob('events.jsonl')):
             rows = Journal.verify(path)
             start = next(row['data'] for row in rows if row['kind'] == 'episode_start')
+            if start.get('kind') == 'network-v2':
+                for row in rows:
+                    if row['kind'] != 'network_request' or row['data']['metadata']['phase'] != 'reporting':
+                        continue
+                    request = row['data']
+                    entries.append({'id': digest([start['identity'], request['key']]),
+                                    'model': start['model'], 'case': start['case'],
+                                    'branch': request['metadata']['branch'],
+                                    'checkpoint_id': request['metadata']['checkpoint_id'],
+                                    'request': request['payload'],
+                                    'serving_token_ids': request['tokenization'].get('tokens'),
+                                    'serving_token_count': request['tokenization']['count'],
+                                    'source_journal': str(path.resolve())})
+                continue
             pending = None
             for row in rows:
                 if row['kind'] == 'request' and row['data']['phase'] == 'reporting':

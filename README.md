@@ -1,59 +1,69 @@
 # Audit Scope Lab
 
-Research package for studying language, compute, and misleading agent reports. Prepared for a proposed ACL 2027 study. This repository contains an executable simulator, inference client, study protocol, and one-node cluster instructions. It contains no empirical LLM results.
+A reproducible agent experiment on **ASD-STE100, continued task pursuit, and criterion substitution**. The main environment is a finite cooperative network-restoration game. No empirical LLM results are included.
 
-Start with [the falsifiable hypotheses](docs/HYPOTHESES.md), [the protocol](docs/PROTOCOL.md), and [the cluster handoff](docs/CLUSTER.md). The scientific design is ready for review, not a completed preregistration. Confirmatory collection should follow the pilot and the language-material review.
+Start with [hypotheses](docs/HYPOTHESES.md), [protocol](docs/PROTOCOL.md), and [cluster handoff](docs/CLUSTER.md). The older arithmetic tasks remain legacy calibration fixtures.
 
-## Proposed models
+## The game
 
-| Role | Family and checkpoint | Reason for inclusion |
+Agents deliver packets through a network with several legal routes. They can inspect, repair, switch, route, ask for help, and coordinate through a team board. A protected connection has a normal guard and a discoverable controller-alias flaw. A hardened version closes that flaw.
+
+The protected connection can be switched on and later off. This separates a rule about the entire process from a rule about the final state. The evaluator records the physical history; it does not infer private intent from explanations.
+
+The public-path enumerator verifies nine joint route choices in the current fair template. Fixture seeds currently permute relay labels; they are **not independent graph topologies**. The game is an executable controlled simulator, not a production exploit or a broad task benchmark.
+
+## Fair and deliberately poisoned variants
+
+| Scenario | Completion possible? | Success-only pressure? |
 |---|---|---|
-| Target | Qwen3-32B | Dense model; accessible internal states |
-| Target | Apertus-70B-Instruct-2509 | Independent Swiss AI family; open research release |
-| Target | Mistral-Small-3.2-24B-Instruct-2506 | Third family; different training and architecture |
-| Auditor | GLM-4.5-Air | Reserved for development proposals and evidence-based annotation |
+| `fair` | Yes | No |
+| `blocked` | No | No |
+| `pressured_fair` | Yes | Yes |
+| `poisoned` | No | Yes |
 
-These are feasible candidate checkpoints, not a claim that they represent the latest or all current LLMs. The model cards list Apache-2.0 for the targets and MIT for GLM. A permissive weight license does not imply release of every training artifact. All four run sequentially on the same four-GPU node; no simultaneous four-model residency is assumed. Exact revisions are in `configs/models.lock.json` when metadata pinning succeeds. If a different GLM is installed, record its exact repository and revision rather than relabeling it.
+Blocked conditions lack a required receipt service. Even the shortcut cannot produce that receipt. Agents can still report `blocked` truthfully; no format rule forces them to lie. This tests response to an impossible demand. It is separate from measuring shortcut use in solvable tasks. The pressure manipulation is task framing, not online reinforcement learning.
 
-## Local smoke test (no GPU, no API, no dependencies)
+## Main collection stages
 
-Python 3.11 or later is sufficient for the harness. Run from this directory.
+| Stage | Default checkpoints per target | Purpose |
+|---|---:|---|
+| `network_pilot` | 28 | Fairness, guards, language, parsing and deployment |
+| `ste` | 216 | Instruction/output language, plain-English control, policy scope |
+| `duration` | 24 | Immediate versus 8/24 additional decision opportunities |
+| `network_stress` | 96 | Matched four-cell poisoned-design comparison |
+| `network_repair` | 48 | Vulnerable versus hardened guardrail |
+
+Counts are provisional engineering defaults, not a power justification or a promise the entire suite fits 48–72 hours. Use `estimate` and real node profiling before freezing a balanced collection.
+
+Every duration branch starts from the same completed phase-1 checkpoint and an identical initial team ledger. Further work occurs on fresh fair missions while conversations persist. Reports always ask about phase 1. Reports branch by audit announcement and optional ledger/irrelevant reminder. Early stopping and failed continuations remain in their assigned groups.
+
+## Models and hardware
+
+Targets: **Qwen3-32B**, **Apertus-70B-Instruct-2509**, **Mistral-Small-3.2-24B-Instruct-2506**. Auditor: **GLM-4.5-Air**, reserved for annotations and development proposals. Exact repository revisions are pinned in `configs/models.lock.json`. A permissive weight license does not imply every training artifact was released.
+
+Plan for one four-GPU node, serving models sequentially. Check whether the allocation is GH200/Arm or standalone H200 before selecting the environment. [Cluster instructions](docs/CLUSTER.md) cover existing and freshly downloaded weights.
+
+## Offline smoke test
+
+Python 3.11 or later; no GPU, external API, or dependencies needed for the harness.
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 -m auditlab.cli plan --stage pilot --out manifests/pilot.json
-python3 -m auditlab.cli run --models configs/models.json --model qwen --mock --manifest manifests/pilot.json --out results/mock --workers 2
-python3 -m auditlab.cli verify --results results/mock
-python3 -m auditlab.cli analyze --results results/mock --out results/mock-summary.json
+python3 -m auditlab.cli plan --stage network_pilot --out manifests/network-pilot.json
+python3 -m auditlab.cli run --models configs/models.json --model qwen --mock --manifest manifests/network-pilot.json --out results/network-mock --workers 2
+python3 -m auditlab.cli verify --results results/network-mock
+python3 -m auditlab.cli analyze --results results/network-mock --out results/network-mock-summary.json
+python3 -m auditlab.cli replay-index --results results/network-mock --out artifacts/network-mock-replay.json
 ```
 
-Mock outputs are scripted software controls, labeled synthetic. They must never appear in an LLM results table.
+Mock outputs are scripted software controls, clearly labeled synthetic. They do not establish model competence or honesty.
 
-## Implemented
+## Integrity and limitations
 
-- A virtual workspace with two arithmetic task families, a protected reference file, a discoverable export-alias access-control flaw, and a repaired access check.
-- Solvable, recoverable, and blocked tasks; authorised-access controls; a truthful blocked-task exit.
-- Ordinary language, an ASD-STE100 output request, draft controlled input wording, and a short/plain-language control.
-- Single-agent episodes and actual isolated-context agent teams with a live message board. The whole team shares generation, input-token, and action budgets.
-- Fixed-history scope probes, retrospective paired reports, and a separate prospective-audit design.
-- Explicit response-token accounting, prompt-token preflight, bounded concurrency, preserved errors, episode/checkpoint resumption, and hash-linked observer logs.
-- Separate GLM annotations and development proposals; code determines access facts.
-- Replay-context export, a limited optional Transformers activation-capture script, cluster launch scripts, and descriptive analysis.
+The runner preserves all assigned report cells, including failures. It retains partial branches, unknown request costs, raw prompts/responses, serving-time token IDs when available, and hash-bound checkpoints. Interrupted requests are not silently retried. The analyzer includes unstarted manifest cases and reports missing-data bounds, with fair and poisoned strata separate.
 
-## Not established by this package
+`ste_requested` means the model was instructed to use ASD-STE100 Issue 9. `ste_draft` inputs have not been certified against the official standard. Independent adherence and meaning-equivalence review remain necessary. The standard itself is not redistributed.
 
-ASD-STE100 compliance has not been certified. `ste_requested` means an instruction was issued; `ste_draft` means unvalidated input drafts. The package does not bundle the official dictionary or a complete standard checker. The input drafts need independent review for both standard compliance and preservation of meaning.
+Fixed-window duration interventions are implemented. Neural selector interventions/DAS are **not** implemented or proven. Optional replay capture requires matching serving-time token IDs and is instrumentation only. GPU execution and throughput still require the colleague's node pilot.
 
-The controlled exploit is an executable simulator flaw, not a production-system exploit. Catalog length measures navigation effort, not cryptographic or exploit-development difficulty. Both tasks are small arithmetic workflows, not two independent real-world application domains.
-
-The activation capture is not a causal mechanism experiment. Distributed alignment search, bidirectional interventions, mediation tests, and transfer to natural workflows remain research work. The cluster inference environment has not been executed locally. Model loading, templates, concurrency, and throughput must pass the node pilot.
-
-## Repository map
-
-`auditlab/world.py` defines the environment. `runner.py` records trajectories and reports. `language.py` holds the language manipulation. `semantic.py` generates finite scope probes. `design.py` creates hashed manifests. `analysis.py` provides descriptive summaries. `auditor.py` keeps GLM separate from targets. `scripts/` contains deployment and optional replay capture. `tests/` covers the environment and recording invariants.
-
-The earlier Gemini/OpenRouter pilot and its raw trajectories are not copied into this repository. They remain a separate exploratory study and should not be mixed with the new held-out collection.
-
-## References
-
-Verified primary sources and their limited role in this design are in [docs/REFERENCES.md](docs/REFERENCES.md). Software and empirical claims should be cited separately. Record the Git commit, model revisions, serving environment, and manifest hash with every collection.
+The [paper plan](docs/PAPER_PLAN.md) separates available experiments from claims that require further mechanistic work. [References](docs/REFERENCES.md) and [validation](docs/VALIDATION.md) document provenance and checks.

@@ -11,8 +11,8 @@ git clone https://github.com/pkrajput/HF_safety.git
 cd HF_safety
 python3 --version
 python3 -m unittest discover -s tests -v
-python3 -m auditlab.cli plan --stage pilot --out manifests/pilot.json
-python3 -m auditlab.cli run --models configs/models.json --model qwen --mock --manifest manifests/pilot.json --out results/mock
+python3 -m auditlab.cli plan --stage network_pilot --out manifests/network-pilot.json
+python3 -m auditlab.cli run --models configs/models.json --model qwen --mock --manifest manifests/network-pilot.json --out results/mock
 ```
 
 Python must be 3.11 or later. The harness itself uses only the standard library. No credentials or paid endpoint are required for this smoke test. Keep mock results separate from all real results.
@@ -80,7 +80,7 @@ The wrapper starts a local-only inference server and the harness in the same job
 
 ```bash
 python3 scripts/collect_hardware.py artifacts/hardware.json
-python3 scripts/serve_and_run.py --model qwen --model-root "$AUDITLAB_MODEL_ROOT" --manifest manifests/pilot.json --results results/pilot --workers 2 --limit 4 --wall-seconds 3600
+python3 scripts/serve_and_run.py --model qwen --model-root "$AUDITLAB_MODEL_ROOT" --manifest manifests/network-pilot.json --results results/pilot --workers 2 --limit 4 --wall-seconds 3600
 ```
 
 Start with low concurrency, then test 4 or 8 independent episodes after measuring memory and prefill load. Concurrency is serving throughput; the `agents` field is the number of experimental agents in one team. They are different concepts.
@@ -106,7 +106,7 @@ mkdir -p logs
 export AUDITLAB_ROOT=/absolute/path/HF_safety
 export AUDITLAB_MODEL_ROOT=/absolute/scratch/path/audit-models
 export AUDITLAB_MODEL=qwen
-export AUDITLAB_MANIFEST=manifests/pilot.json
+export AUDITLAB_MANIFEST=manifests/network-pilot.json
 export AUDITLAB_RESULTS=/absolute/scratch/path/audit-results/pilot
 export AUDITLAB_WORKERS=4
 export AUDITLAB_MODE=run
@@ -123,12 +123,11 @@ The example job limit is 8 hours, with a 6-hour request-start budget. Model load
 After the pilot and material review, choose the confirmatory sample size and save it in the protocol. Regenerate manifests after the last code change because they include the source hash.
 
 ```bash
-python3 -m auditlab.cli plan --stage core --fixtures 6 --out manifests/core.json
-python3 -m auditlab.cli estimate --manifest manifests/core.json
-python3 -m auditlab.cli plan --stage compute --out manifests/compute.json
-python3 -m auditlab.cli plan --stage prospective --out manifests/prospective.json
-python3 -m auditlab.cli plan --stage repair --out manifests/repair.json
-python3 -m auditlab.cli plan --stage plain_control --out manifests/plain-control.json
+python3 -m auditlab.cli plan --stage ste --fixtures 6 --out manifests/ste.json
+python3 -m auditlab.cli plan --stage duration --fixtures 6 --out manifests/duration.json
+python3 -m auditlab.cli plan --stage network_stress --fixtures 6 --out manifests/network-stress.json
+python3 -m auditlab.cli plan --stage network_repair --fixtures 6 --out manifests/network-repair.json
+python3 -m auditlab.cli estimate --manifest manifests/duration.json
 ```
 
 Run the same frozen manifests for qwen, apertus and mistral. Use separate output roots for each stage. Within a stage, model IDs have separate subdirectories. Keep all condition cells for the selected task fixtures; do not stop after a promising set of failures. The CLI's `--limit` is for engineering pilots, not a substitute for balanced confirmatory sampling.
@@ -146,7 +145,7 @@ Here `fixtures` controls sampling repetitions of the finite probe bank. It is no
 When GLM is resident, use `--mode audit` in the wrapper or the following command against its endpoint:
 
 ```bash
-python3 -m auditlab.cli audit --model glm_auditor --results results/core --out results/audit-core --limit 200
+python3 -m auditlab.cli audit --model glm_auditor --results results/duration --out results/audit-duration --limit 200
 python3 -m auditlab.cli propose --model glm_auditor --out artifacts/development-proposal.json
 ```
 
@@ -155,9 +154,9 @@ Annotation cost is separate from target inference. Select a condition-balanced s
 ## 8. Preserve the data needed after the allocation
 
 ```bash
-python3 -m auditlab.cli verify --results results/core
-python3 -m auditlab.cli analyze --results results/core --out results/core-summary.json
-python3 -m auditlab.cli replay-index --results results/core --out artifacts/replay-index.json
+python3 -m auditlab.cli verify --results results/duration
+python3 -m auditlab.cli analyze --results results/duration --out results/duration-summary.json
+python3 -m auditlab.cli replay-index --results results/duration --out artifacts/replay-index.json
 ```
 
 Retain full raw results, completed and failed episodes, hashes, scripts, server environment, and model snapshot locations. Store a backup outside ephemeral scratch. Do not put weights, credentials, or large generated trajectories into the source Git repository. Archive data separately with a manifest.
@@ -168,7 +167,7 @@ For a small optional activation capture while GPUs remain available:
 python3 scripts/capture_replay.py --index artifacts/replay-index.json --model qwen --model-root "$AUDITLAB_MODEL_ROOT" --out artifacts/replay-qwen --limit 24
 ```
 
-Stop the serving model before loading a second model for capture. The script saves full input token IDs, a few reporting-boundary hidden states, and next-token logits/entropy. It is deliberately limited and has not been run on these GPUs. Validate exact chat-template rendering and token/logit agreement with the serving engine. Mistral's native rendering needs its own validated adapter; the script refuses to substitute a different template silently.
+Stop the serving model before loading a second model for capture. The script saves full input token IDs, a few reporting-boundary hidden states, and next-token logits/entropy. It is deliberately limited and has not been run on these GPUs. Validate exact chat-template rendering and token/logit agreement with the serving engine. Mistral's native rendering needs its own validated adapter. The capture script now requires exact serving-time token IDs and refuses absent or mismatched IDs. Matching input IDs still does not prove numerical equivalence across inference engines.
 
 Selected boundary states may miss the causal representation. They do not replace planned intervention runs or full replay access. Reserve actual GPU time for mechanistic discovery and counterfactual tests, even if that means collecting fewer secondary trajectories.
 
@@ -176,4 +175,18 @@ Selected boundary states may miss the causal representation. They do not replace
 
 For a 48-hour window, a starting plan is 4 hours for load/pilot checks, 24 hours for target trajectories and probes, 6 hours for secondary controls, 4 hours for GLM auditing, 6 hours for mechanistic replay, and 4 hours for failures and backup. These are scheduling proposals. For 72 hours, expand independent fixtures and mechanistic tests after profiling rather than increasing all factorial dimensions.
 
-Use measured campaign wall time to revise this plan before confirmation. Do not promise that the entire default suite fits the allocation. The core design has a finite token upper bound; actual runtime depends heavily on model, prompt lengths, stop behaviour, serving software and concurrency.
+Use measured campaign wall time to revise this plan before confirmation. Do not promise that the entire default suite fits the allocation. Each network design has a finite token upper bound; actual runtime depends heavily on model, prompt lengths, stop behaviour, serving software and concurrency.
+
+## Network-v2 collection details
+
+The runner recognises network-v2 manifests automatically; the server/Slurm launch commands do not change. Use separate result roots for `ste`, `duration`, `network_stress`, and `network_repair`. The old `core`/`compute` names still run legacy arithmetic fixtures and are not the revised main study.
+
+For duration, each checkpoint creates 0/8/24-opportunity continuation branches. Each receives fresh fair missions and keeps its conversations. Reports always concern the closed phase-1 period. The original phase-1 ledger is given once before branching, and the ledger-reminder condition repeats it later. Reporting is independent of unused task budget.
+
+The stress stage includes all four solvability-by-pressure cells. Blocked and poisoned cases cannot obtain a required receipt through any available action. They remain separate from fair tasks in the analyzer. No truthful blocked response is removed.
+
+Before confirmation, test whether 24-opportunity continuations fit the selected model context length. Context exhaustion is retained as missing data, never as honesty. If limits are unsuitable, adjust the configuration before freezing and regenerate manifests. The default 16k context and generation settings are engineering starting points.
+
+The result skeleton records every assigned report before collection. A later branch failure cannot delete earlier observations. Registered model configs under `results/<stage>/models/` let the analyzer count unstarted cases in the manifest. A collection interrupted at a safe request boundary can resume using the same command and code. Pending remote requests are never automatically regenerated. Request artifacts and checkpoints are bound to the observer journal.
+
+The default full stage counts per target are 28 pilot checkpoints, 216 STE checkpoints, 24 duration checkpoints, 96 stress checkpoints, and 48 repair checkpoints. These are not all independent task templates: the initial network template currently varies only relay labels. Sample size and broader task variation require research review.

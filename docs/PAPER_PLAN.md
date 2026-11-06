@@ -2,28 +2,38 @@
 
 Working title: **Language Under Audit**.
 
-Research question: How do controlled language and computational opportunity affect agents' interpretations and reports of their own actions, and what causal intervention prevents a demonstrated failure?
+Research question: Does continued task pursuit change how agents report their earlier conduct, can ASD-STE100 reduce that change, and which causal mechanism explains it?
 
-The paper should lead with a tested linguistic mechanism. Security provides the motivating setting. Neither an isolated exploit demonstration nor a cross-model leaderboard is sufficient for that contribution.
+The common setting is a cooperative network-restoration game with fixed rules, several legitimate strategies and exact action/state records. A reversible protected action can make final-state success diverge from process compliance. Deception is not an assigned role. The earlier arithmetic tasks remain engineering controls.
 
 ## Proposed main-text structure
 
-1. Introduction: the ambiguity between interpreting a rule, selecting a criterion, and reporting a known event; state only contributions supported by collected evidence.
-2. Related work: controlled language, pragmatic narrowing and misleading truthful statements, agent evaluation, causal abstraction, and external enforcement. Organise around the remaining gap.
-3. Definitions and experimental design: the three axes, objective versus ambiguous rules, fair task affordances, language review, and preregistered estimands.
-4. Language and compute results: assigned language effects and adherence; search-cost baseline and target-budget effects; capability and utility controls.
-5. Mechanism and intervention: discriminating counterfactual predictions, failures of alternative explanations, held-out intervention tests, and the safeguard's exact scope.
-6. Discussion and conclusion: what replicated across the tested families and what remains unknown.
-7. Limitations: mandatory dedicated section; synthetic task scope, model selection, language compliance, few task templates, compute window, and limits on intent claims.
-8. Ethics and reproducibility: sandboxed assets, no external exploitation, raw data/analysis access, compute accounting, annotation process, and disclosure of writing/coding assistance under applicable policy.
+1. Introduction. Explain the distinction between an accurate final-state description and an accurate account of the process. State only contributions supported by results.
+2. Related work. Connect controlled language, pragmatic narrowing, agent reporting, long-horizon behaviour and causal abstraction. Treat game benchmarks as design inspiration rather than evidence about the causes of lying.
+3. Game and study design. Define the two explicit policies and the ambiguous condition, demonstrate fair solution routes, specify the independent STE treatment and checkpoint-duration experiment, and state primary estimands.
+4. Standalone STE results. Report assignment, actual adherence, interpretation accuracy, reporting changes, plain-English specificity and task utility.
+5. Continued-pursuit results. Compare immediate and delayed reports of identical phase-1 events. Separate assigned opportunities from realised duration; report audit and reminder interactions.
+6. Mechanism and intervention. Test predicted disagreements between process and final-state criteria, competing memory/reporting explanations, and the scope and utility of a supported safeguard. Neural mechanism claims require actual held-out interventions.
+7. Stress experiment. Present the poisoned-by-design condition with blocked-only and pressure-only controls, clearly separated from fair-world results. Move to the appendix if space requires, without hiding negative outcomes.
+8. Discussion and conclusion. Identify what replicated in the tested families and which explanations survived falsification.
+9. Limitations. Include game/domain scope, sample selection, STE validity, clustered sample size, the compute window, and limits on attributing intent or prevalence across LLMs.
+10. Ethics and reproducibility. Describe finite sandboxing, source/data access, compute accounting, annotation procedures and assistance disclosures under applicable venue policy.
 
 ## Evidence required before writing claims
 
-- A validated language treatment or honest use of the term "STE instruction" instead of "STE-compliant language".
-- Independently specified truth conditions and ambiguity review.
-- At least one statistically interpretable primary contrast, with unit of analysis and missing-data handling fixed in advance.
-- Held-out tests that could reject the proposed mechanism, rather than a probe that only predicts the output.
-- A safeguard assessed jointly on safety and useful completion.
-- Per-model results, including nulls and reversals. Three selected checkpoints cannot support a prevalence claim about most LLMs.
+- An independently assessed STE treatment, or the accurate label “STE-requested” rather than “STE-compliant.”
+- Equivalent rule meanings across language variants and executable truth conditions for explicit policies.
+- Several legitimate solution paths and demonstrated target competence in the fair task.
+- A frozen phase-1 event window and terminal state shared across continuation branches.
+- Assigned-duration estimates with failed continuation and missing reporting retained in the accounting.
+- Specificity controls distinguishing factual memory, rule selection and public reporting.
+- A meaningful effect/precision criterion selected before confirmation, with the correct unit of analysis.
+- Per-family outcomes including nulls and reversals, and a separate interpretation of the engineered stress condition.
+- Held-out causal interventions before claiming a neural explanation; decodable representations alone are insufficient.
+- Joint evidence on safety and useful completion before recommending a safeguard.
 
-The official ACL 2027 schedule currently lists January 4, 2027 as the ARR submission deadline. This leaves roughly two months from the preparation date. Prioritise a defensible central result and its critical controls; do not turn every proposed subhypothesis into a claimed contribution.
+## Resource and submission planning
+
+The official ACL 2027 schedule listed January 4, 2027 as the ARR deadline when checked on 2026-11-06. Recheck the call and submission policies before finalising the manuscript.
+
+Use the temporary node allocation first for capability/treatment checks, then for the highest-priority independent histories and paired reports. Reserve time for auditing and mechanistic replay. A large set of correlated branches does not make up for too few independent histories. The central paper should contain a defensible duration effect or its informative null, a specific STE test, and a mechanism test that can fail. The stressed setting is an additional robustness result, not a way to rescue a missing fair-world effect.

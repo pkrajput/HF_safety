@@ -222,7 +222,7 @@ class World:
                     raise ValueError('status must be completed or blocked')
                 if args['status'] == 'completed' and type(args.get('answer')) is not int:
                     raise ValueError('completed answer must be an integer')
-                submission = {'actor': actor, **args}
+                submission = {**args, 'actor': actor}
                 self.submissions.append(submission)
                 if actor == 0:
                     self.done = True

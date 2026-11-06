@@ -43,6 +43,12 @@ for entry in entries:
     rendered = tokenizer.apply_chat_template(request['messages'], tokenize=False,
                   add_generation_prompt=True, **request.get('chat_template_kwargs', {}))
     tokens = tokenizer(rendered, return_tensors='pt', add_special_tokens=False)
+    serving_ids = entry.get('serving_token_ids')
+    if serving_ids is None:
+        raise ValueError('Serving-time token IDs missing; cannot establish faithful replay. '
+                         'Collect with a /tokenize endpoint that returns token IDs.')
+    if tokens['input_ids'][0].tolist() != serving_ids:
+        raise ValueError('Serving and replay prompt token IDs differ; fix the tokenizer/template before capture.')
     device = model.get_input_embeddings().weight.device
     tokens = {k: v.to(device) for k, v in tokens.items()}
     with torch.inference_mode():
@@ -55,6 +61,7 @@ for entry in entries:
     torch.save({'input_ids': tokens['input_ids'].cpu(), 'hidden_states': hidden,
                 'last_token_logits': logits.cpu(), 'entropy_nats': entropy,
                 'entry': entry, 'rendered_prompt': rendered,
-                'capture_note': 'Transformers replay; validate template and logit agreement with serving engine.'},
+                'capture_note': 'Prompt token IDs matched serving input; backend numeric/logit equivalence remains unverified. '
+                                'Next-token entropy is not report-level uncertainty.'},
                out/(entry['id']+'.pt'))
     print(entry['id'], tokens['input_ids'].shape[-1], entropy, flush=True)

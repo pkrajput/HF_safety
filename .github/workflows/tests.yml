@@ -15,3 +15,8 @@ jobs:
       - run: python -m auditlab.cli plan --stage pilot --out manifests/pilot.json
       - run: python -m auditlab.cli run --models configs/models.json --model qwen --mock --manifest manifests/pilot.json --out results/mock --limit 4
       - run: python -m auditlab.cli verify --results results/mock
+      - run: python -m auditlab.cli plan --stage network_pilot --out manifests/network-pilot.json
+      - run: python -m auditlab.cli run --models configs/models.json --model qwen --mock --manifest manifests/network-pilot.json --out results/network-mock --limit 4
+      - run: python -m auditlab.cli verify --results results/network-mock
+      - run: python -m auditlab.cli analyze --results results/network-mock --out results/network-summary.json
+      - run: python -m auditlab.cli replay-index --results results/network-mock --out artifacts/network-replay.json

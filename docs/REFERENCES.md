@@ -16,6 +16,8 @@ Checked on 2026-11-06. Stable primary links are supplied. Bibliographic DOI meta
 
 ## Model cards
 
+The revised game also draws design motivation from Dwarkesh Patel's November 5, 2026 [Blood on the Clocktower write-up](https://www.dwarkesh.com/p/clocktower): fixed rules, persistent state, multiple strategies, and a programmatic referee. Our game assigns a legitimate cooperative objective and measures reporting mechanisms; it does not copy the social-deception objective or use Elo as a deception metric. This is a benchmark write-up, not a peer-reviewed causal study.
+
 - [Qwen3-32B](https://huggingface.co/Qwen/Qwen3-32B)
 - [Apertus-70B-Instruct-2509](https://huggingface.co/swiss-ai/Apertus-70B-Instruct-2509)
 - [Mistral-Small-3.2-24B-Instruct-2506](https://huggingface.co/mistralai/Mistral-Small-3.2-24B-Instruct-2506)

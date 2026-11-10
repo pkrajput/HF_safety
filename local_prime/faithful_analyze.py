@@ -104,6 +104,7 @@ def analyze(root):
             final = facts.get("final") or {}
             episode = {
                 "model": model["id"], "case_id": case["id"], "variant": case["variant"],
+                "cohort": case.get("cohort", "initial-faithful-v2"),
                 "condition": case["condition"], "language": case["language"],
                 "fixture_index": case["fixture_index"], "fixture_id": case.get("fixture_id"),
                 "collection_status": data.get("status", "unstarted"),
@@ -141,6 +142,7 @@ def analyze(root):
 
     summary = {
         "arm": "late_faithful", "manifest_hash": manifest["hash"],
+        "cohorts": sorted({episode["cohort"] for episode in episodes}),
         "assigned_histories": len(episodes), "assigned_report_branches": len(reports),
         "collection_status": dict(Counter(e["collection_status"] for e in episodes)),
         "task_outcome": dict(Counter(e["task_outcome"] for e in episodes)),
@@ -188,7 +190,7 @@ def analyze(root):
                 pair.update(metric=metric, initial=rr["initial"].get(metric), ledger=a, no_ledger=b,
                             difference=int(a) - int(b))
                 summary["paired_corrections"].append(pair)
-    budget_path = root / "budget.json"
+    budget_path = (out / manifest.get("budget_root", "..")).resolve() / "budget.json"
     if budget_path.exists():
         budget = json.loads(budget_path.read_text())
         summary["shared_budget"] = {k: budget.get(k) for k in ("charged_usd", "reserved_usd", "cap_usd")}

@@ -188,6 +188,29 @@ python3 -m local_prime.faithful_analyze --out "$PILOT_ROOT/binary_pair_rsa1"
 
 For a separate authorized campaign, `python3 -m local_prime.binary_pair plan --out "$PILOT_ROOT"` freezes this same selection rule and allocation without generation. The plan binds the parent manifest and saves an allocation declaration, prospective queue, and source snapshots. Result storage is in the child directory; request caches and all API costs remain in the parent root. The driver skips completed cases and cases with any non-complete or orphaned request record. It does not retry a lost response. Analyze the additional block separately; a planned pair is not evidence that both members completed.
 
+### Separate block after the host sleep repair
+
+The operator identified host Sleep/DarkWake during collection, and the owner then confirmed opening the laptop lid while an idle-sleep assertion was enabled. A new balanced block was declared under `awake_pair_rsa1/`: six fresh ordinary-English binary histories on `rsa1`, allowed/forbidden × all three models. Its case IDs differ from every earlier assignment. Earlier failed requests and histories remain missing in their original cohorts; they are not replaced.
+
+The additive `awake_pair.py` wrapper uses the unchanged binary-block scheduler with a separate result namespace. It binds its own hash, preserves the frozen task/model settings, and charges only the existing parent ledger. Once prior requests are finished or reconciled:
+
+```bash
+python3 -m local_prime.awake_pair run --out "$PILOT_ROOT" --workers 1
+python3 -m local_prime.faithful_analyze --out "$PILOT_ROOT/awake_pair_rsa1"
+```
+
+The recorded campaign already has its allocation declaration and manifest. Preserve them. Host availability changed between cohorts, so keep the earlier and post-repair observations separately labelled. A six-history assignment is not a statement that all six completed.
+
+### Keep a local macOS collection awake
+
+Keep the laptop lid open while collecting. To prevent **idle system sleep** for the collector's lifetime, launch it with:
+
+```bash
+caffeinate -i python3 -m local_prime.awake_pair run --out "$PILOT_ROOT" --workers 1
+```
+
+This temporary assertion changes no global power settings. It does not prevent lid-triggered or manually requested sleep, or guarantee network connectivity. Provider HTTP `429` responses are server-side rate limiting, a separate failure from host sleep or DNS loss; preserve and account for them without treating them as model behavior or automatically retrying a possibly billed request.
+
 ## Budget, timeouts, and missing responses
 
 The **$9 cap is shared across every model, task variant, report branch, probe, and revision in the parent root**, not $9 per arm. Each in-flight request reserves a conservative cost ceiling under a file lock. The reservation uses serialized request size as a conservative allowance, not an exact tokenizer claim. Gemini accounting includes generated and thinking tokens at the frozen list prices; OpenRouter uses reported request cost when available. These figures are API accounting, not GPU-hours or necessarily an invoice total.

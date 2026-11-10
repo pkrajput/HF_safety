@@ -81,3 +81,9 @@ The runner preserves all assigned report cells, including failures. It retains p
 Fixed-window duration interventions are implemented. Neural selector interventions/DAS are **not** implemented or proven. Optional replay capture requires matching serving-time token IDs and is instrumentation only. GPU execution and throughput still require the colleague's node pilot.
 
 The [paper plan](docs/PAPER_PLAN.md) separates available experiments from claims that require further mechanistic work. [References](docs/REFERENCES.md) and [validation](docs/VALIDATION.md) document provenance and checks.
+
+## Local prime-task engineering pilot
+
+The 10 November local pilot uses the historical Gemini/OpenRouter model IDs before further cluster allocation. Three datasets remain separate: the revised guarded-file task, adapted late-instruction v1 engineering trials, and restored late-instruction v2. V2 restores the original provider-specific action protocol and includes binary reward on `rsa0` and private partial credit on `rsa3`; its later reporting phase is new measurement. Current API capabilities and serving routes can differ from the historical deployment.
+
+All revisions share one **$9 parent budget**, with bounded concurrency and conservative accounting for missing responses. Assignment counts are plans, not completed-result claims. The [local pilot instructions](local_prime/README.md) include standalone setup, offline budget initialization, collection and analysis commands, and handoff requirements. These small solo API trials do not replace the full cluster targets or establish a pooled STE, deception, duration, or swarm effect.

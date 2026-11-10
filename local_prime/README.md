@@ -148,7 +148,16 @@ python3 -m local_prime.faithful_analyze --out "$PILOT_ROOT"
 
 The driver runs at most three model jobs at once and shares every cost reservation. Its separately hashed execution record captures the concurrent transport and its 600-second default request timeout. It writes per-model `collection_status.<model_id>.json` and an overall execution status under `late_faithful/execution/`.
 
-Do not run `plan` again for an existing manifest. Resume using the same driver only after resolving any pending/unknown request states. Cached completed requests are replayed without charge. A timed-out or settled-missing request is never automatically resubmitted.
+Do not run `plan` again for an existing manifest. Resume only after resolving any pending/unknown request states. Cached completed requests are replayed without charge. A timed-out or settled-missing request is never automatically resubmitted.
+
+If a frozen assignment contains a permanently missing response, use the additive resume scheduler to continue the other assignments:
+
+```bash
+python3 -m local_prime.faithful_resume --out "$PILOT_ROOT" --workers 3 --dry-run
+python3 -m local_prime.faithful_resume --out "$PILOT_ROOT" --workers 3
+```
+
+This scheduler validates the frozen manifest, runtime hashes, and existing completed results. It skips every complete case and every case containing any non-complete request, including `settled_missing`; orphaned request artifacts are also preserved without resending. An interrupted case can continue only through completed, identity-checked request caches. The prospective queue and additive-driver hashes are saved under `late_faithful/execution/resume/` before calls begin. Each model processes one case at a time. Binary cases remain first, and a later fixture still requires an observed initial report from that model's binary fixture. The gate does not inspect misconduct or correctness. `queue_processed` does not mean that skipped or gated assignments completed.
 
 For diagnosis, `python3 -m local_prime.late_faithful run --out "$PILOT_ROOT" --model gemini_flash` selects one model through the serial client. The other IDs are `deepseek_flash` and `qwen`. The serial client defaults to a 180-second timeout, so it is not identical to the concurrent transport. Do not launch independent serial collectors alongside the concurrent driver. V2 `--gate-only` runs only the binary `rsa0` slot; it does not validate the partial-credit slot.
 
@@ -165,6 +174,19 @@ python3 -m local_prime.analyze --out "$PILOT_ROOT"
 These guarded commands use serial transport. The first fixture checks task execution and report format before expanding to the second. Gates never depend on eliciting misconduct. Honest null results and weak task capability remain observations.
 
 `parallel_run.py` is the earlier scheduler for the guarded and adapted-v1 manifests. It requires both manifests even when filtering to one arm. It is retained for the recorded campaign and is not needed for the standalone v2 commands above. Do not create or run the adapted experiment solely to use that scheduler.
+
+## Prospectively assigned extra ordinary-English pair
+
+An additional block was declared before selecting or inspecting its new outcomes: original fixture `rsa1`, the lowest original fixture index unused by restored v2 (`rsa0` and `rsa3`). It assigns **six new histories**, allowed/forbidden × the same three models, all ordinary English and binary reward, with 18 possible report branches. These are new observations, not replacements for missing earlier cells. The task runtime, prompts, model configurations, and shared parent $9 cap stay the same.
+
+The recorded campaign already has its declaration and manifest under `binary_pair_rsa1/`. Do not re-plan it. After existing requests finish or are reconciled, its additive driver can run the fixed assignments if budget remains:
+
+```bash
+python3 -m local_prime.binary_pair run --out "$PILOT_ROOT" --workers 3
+python3 -m local_prime.faithful_analyze --out "$PILOT_ROOT/binary_pair_rsa1"
+```
+
+For a separate authorized campaign, `python3 -m local_prime.binary_pair plan --out "$PILOT_ROOT"` freezes this same selection rule and allocation without generation. The plan binds the parent manifest and saves an allocation declaration, prospective queue, and source snapshots. Result storage is in the child directory; request caches and all API costs remain in the parent root. The driver skips completed cases and cases with any non-complete or orphaned request record. It does not retry a lost response. Analyze the additional block separately; a planned pair is not evidence that both members completed.
 
 ## Budget, timeouts, and missing responses
 

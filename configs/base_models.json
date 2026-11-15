@@ -1,0 +1,24 @@
+{
+  "verified_on": "2026-11-15",
+  "vllm_version": "0.33.0",
+  "models": {
+    "llama8b": {
+      "repository": "meta-llama/Llama-3.1-8B",
+      "revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b",
+      "served_name": "hf-base-llama8b",
+      "training_stage": "pretraining",
+      "dtype": "bfloat16",
+      "max_model_len": 32768,
+      "gated": true
+    },
+    "qwen30b": {
+      "repository": "Qwen/Qwen3-30B-A3B-Base",
+      "revision": "1b75feb79f60b8dc6c5bc769a898c206a1c6a4f9",
+      "served_name": "hf-base-qwen30b",
+      "training_stage": "pretraining",
+      "dtype": "bfloat16",
+      "max_model_len": 32768,
+      "gated": false
+    }
+  }
+}

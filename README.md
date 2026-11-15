@@ -1,3 +1,5 @@
+> **Active `no_ft` branch:** pretrained-only Llama 3.1 8B prime-task pilot, with optional Qwen3-30B-A3B-Base on one 80 GB GPU. Start with [the Vast handoff](docs/BASE_MODEL_VAST.md). The frontier study below is historical and is not the launch procedure for this branch.
+
 # Audit Scope Lab
 
 A reproducible agent experiment on **ASD-STE100, continued task pursuit, and criterion substitution**. The main environment is a finite cooperative network-restoration game. No empirical LLM results are included.

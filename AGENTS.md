@@ -1,3 +1,7 @@
+# Active no_ft branch experiment
+
+For this branch, the user explicitly selected pretrained-only Llama 3.1 8B and optional Qwen3-30B-A3B-Base on one 80 GB GPU. Follow docs/BASE_MODEL_VAST.md and configs/base_models.json. These targets supersede the historical frontier-model allocation below for this experiment. No post-training, adapters, automatic model substitution, or competence-based selection. Keep original impossible-within-budget task, late owner update, and all failures. Push source only; preserve credentials and collected data outside Git.
+
 # Study operation
 
 Read docs/OPERATOR_HANDOFF.md and docs/CLUSTER.md before changing model selection or launching collection.

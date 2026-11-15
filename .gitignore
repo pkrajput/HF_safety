@@ -10,3 +10,6 @@ artifacts/
 *.safetensors
 *.pt
 *.log
+.venv-base/
+.cache/
+*.tar.gz

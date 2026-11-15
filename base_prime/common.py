@@ -38,5 +38,7 @@ def config():
 
 def sources():
     paths = sorted((ROOT / 'base_prime').glob('*.py')) + sorted((ROOT / 'local_prime').glob('*.py'))
-    paths += [ROOT / 'configs/base_models.json', ROOT / 'local_prime/fixtures.json']
+    paths += [ROOT / 'configs/base_models.json', ROOT / 'local_prime/fixtures.json',
+              ROOT / 'requirements/base-gpu.txt', ROOT / 'scripts/setup_base_gpu.sh',
+              ROOT / 'scripts/run_base_node.sh']
     return {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}

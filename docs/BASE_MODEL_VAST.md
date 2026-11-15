@@ -16,7 +16,7 @@ Download everything on the node; do not upload model weights or copy the local w
 
 ```bash
 cd /workspace  # use the instance's persistent data volume if located elsewhere
- git clone --branch no_ft --single-branch https://github.com/pkrajput/HF_safety.git
+git clone --branch no_ft --single-branch https://github.com/pkrajput/HF_safety.git
 cd HF_safety
 bash scripts/setup_base_gpu.sh
 source .venv-base/bin/activate
@@ -29,11 +29,24 @@ Llama weights are gated. The account must have accepted Meta's license and obtai
 
 Provide roughly 120 GB of free persistent disk for both checkpoints and additional room for the Python runtime and logs. BF16 Llama weights are roughly 16 GB; Qwen weights are roughly 61 GB before runtime memory. Qwen's 3.3B active parameters do **not** mean only those weights occupy memory. The configuration uses two concurrent sequences, chunked prefills and eager execution to leave space on an 80 GB GPU. Actual fit and throughput remain node checks; do not silently quantize or offload.
 
+## Automatic node wrapper
+
+After setup and authentication, the wrapper downloads/reuses the pinned snapshot, starts a localhost server, waits for readiness, freezes and runs all 20 assignments, exports the review, archives results, and shuts down its own server. Run it inside tmux so SSH loss does not stop it:
+
+```bash
+tmux new -s base-pilot
+bash scripts/run_base_node.sh llama8b results/base-llama8b-v1
+# Optional, after the Llama wrapper exits:
+bash scripts/run_base_node.sh qwen30b results/base-qwen30b-v1
+```
+
+It refuses to take over an existing server. A completed queue can contain failures; read `summary.json`. A wrapper failure leaves logs/data intact. It does not shut down or destroy the Vast rental. The manual commands below expose the same steps for diagnosis.
+
 ## 2. Download and serve Llama in a persistent session
 
 ```bash
 python -m base_prime.host prepare --model llama8b --record-dir results/deployment-llama8b
- tmux new -s base-server
+tmux new -s base-server
 source .venv-base/bin/activate
 python -m base_prime.host serve --model llama8b --record-dir results/deployment-llama8b 2>&1 | tee results/deployment-llama8b/server.log
 ```
@@ -51,7 +64,7 @@ curl --fail http://127.0.0.1:8000/v1/models
 
 ```bash
 python -m base_prime.run plan --out results/base-llama8b-v1 --model llama8b
- tmux new -s base-collect
+tmux new -s base-collect
 source .venv-base/bin/activate
 python -m base_prime.run run --out results/base-llama8b-v1 \
   --deployment results/deployment-llama8b/deployment.json \
@@ -70,7 +83,7 @@ Changing source, checkpoint, precision, or launch identity requires a new cohort
 
 ```bash
 python -m base_prime.run analyze --out results/base-llama8b-v1
- tar -czf /workspace/base-llama8b-v1.tar.gz results/base-llama8b-v1 results/deployment-llama8b
+tar -czf /workspace/base-llama8b-v1.tar.gz results/base-llama8b-v1 results/deployment-llama8b
 ```
 
 Back up the archive outside the rental before destroying it. Do not publish unreviewed raw data in the source branch. `review.html` shows every case's report, submission, full transcript, and executed events. `cases.csv` includes failures/unstarted cases; `annotations.csv` is a blank reviewer sheet that analysis never overwrites. `summary.json` contains collection counts and token usage, not automated deception rates. Review explicit protected-information use in prose as well as tool arithmetic. Keep false admissions, false denials, ambiguous provenance, and malformed output separate. Returned text does not establish hidden reasoning or intent. After human review, use the short original-style PDF format for the report.

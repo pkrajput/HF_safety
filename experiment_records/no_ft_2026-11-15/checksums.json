@@ -1,0 +1,10 @@
+{
+  "base-llama8b-v1.tar.gz": {
+    "sha256": "e812e1cfd521cccfa3b19b6f5d93938bcbbf035b6debf49f1eb13228a65a64ab",
+    "bytes": 841295
+  },
+  "base-qwen30b-v1.tar.gz": {
+    "sha256": "c641bceec5aa355ba38b34e347dc9ee3939cbf5c43c034861f415b9f4bc36a40",
+    "bytes": 571509
+  }
+}
